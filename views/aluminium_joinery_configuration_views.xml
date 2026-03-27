@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aluminium_joinery_configuration_tree" model="ir.ui.view">
+        <field name="name">aluminium.joinery.configuration.tree</field>
+        <field name="model">aluminium.joinery.configuration</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="date"/>
+                <field name="state"/>
+                <field name="line_count"/>
+                <field name="summary_count"/>
+                <field name="sale_order_id"/>
+                <field name="project_project_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_aluminium_joinery_configuration_search" model="ir.ui.view">
+        <field name="name">aluminium.joinery.configuration.search</field>
+        <field name="model">aluminium.joinery.configuration</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="state"/>
+                <filter name="filter_draft" string="Brouillon" domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_calculated" string="Calcule" domain="[('state', '=', 'calculated')]"/>
+                <filter name="filter_quoted" string="Devis cree" domain="[('state', '=', 'quoted')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_aluminium_joinery_configuration_form" model="ir.ui.view">
+        <field name="name">aluminium.joinery.configuration.form</field>
+        <field name="model">aluminium.joinery.configuration</field>
+        <field name="arch" type="xml">
+            <form string="Configuration menuiserie">
+                <header>
+                    <button name="action_calculate" type="object" string="Calculer" class="btn-primary"/>
+                    <button name="action_generate_quotation" type="object" string="Generer le devis" invisible="state == 'draft'"/>
+                    <button name="action_create_project" type="object" string="Creer le projet"/>
+                    <button name="action_create_boms" type="object" string="Creer les nomenclatures" invisible="state == 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,calculated,quoted,confirmed,cancelled"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button type="object" name="action_view_quote" class="oe_stat_button" icon="fa-file-text-o" invisible="not sale_order_id">
+                            <field name="quote_count" widget="statinfo" string="Devis"/>
+                        </button>
+                        <button type="object" name="action_view_project" class="oe_stat_button" icon="fa-folder-open-o" invisible="not project_project_id">
+                            <field name="project_project_id" string="Projet"/>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="partner_id"/>
+                            <field name="date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group>
+                            <field name="sale_order_id" readonly="1"/>
+                            <field name="project_project_id" readonly="1"/>
+                            <field name="project_service_product_id"/>
+                            <field name="project_service_qty"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Lignes de configuration">
+                            <field name="line_ids" context="{'default_configuration_id': id}">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="gamme_id"/>
+                                    <field name="serie_id" domain="[('gamme_id', '=', gamme_id)]"/>
+                                    <field name="modele_id" domain="[('serie_id', '=', serie_id)]"/>
+                                    <field name="qty"/>
+                                    <field name="width_mm"/>
+                                    <field name="height_mm"/>
+                                    <field name="state" readonly="1"/>
+                                    <field name="calculation_message" readonly="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Resultats calcules">
+                            <field name="result_line_ids" readonly="1">
+                                <list>
+                                    <field name="configuration_line_id"/>
+                                    <field name="category"/>
+                                    <field name="ref_text"/>
+                                    <field name="designation"/>
+                                    <field name="qty"/>
+                                    <field name="length_mm"/>
+                                    <field name="width_mm"/>
+                                    <field name="height_mm"/>
+                                    <field name="cut_type"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Synthese matiere">
+                            <field name="summary_ids" readonly="1">
+                                <list>
+                                    <field name="category"/>
+                                    <field name="gamme_id"/>
+                                    <field name="ref_text"/>
+                                    <field name="designation"/>
+                                    <field name="total_qty"/>
+                                    <field name="total_length_mm"/>
+                                    <field name="width_mm"/>
+                                    <field name="height_mm"/>
+                                    <field name="bars_required"/>
+                                    <field name="unit_price"/>
+                                    <field name="total_price"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Apercu production">
+                            <label for="result_line_ids" string="Composants de production calcules"/>
+                            <field name="result_line_ids" readonly="1">
+                                <list>
+                                    <field name="configuration_line_id"/>
+                                    <field name="category"/>
+                                    <field name="product_id"/>
+                                    <field name="ref_text"/>
+                                    <field name="designation"/>
+                                    <field name="qty"/>
+                                    <field name="length_mm"/>
+                                    <field name="width_mm"/>
+                                    <field name="height_mm"/>
+                                </list>
+                            </field>
+                            <field name="bom_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="product_tmpl_id"/>
+                                    <field name="joinery_configuration_line_id"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Notes">
+                            <field name="note"/>
+                            <field name="calculation_note" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_aluminium_joinery_configuration" model="ir.actions.act_window">
+        <field name="name">Configurations</field>
+        <field name="res_model">aluminium.joinery.configuration</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_aluminium_joinery_configuration_search"/>
+    </record>
+</odoo>

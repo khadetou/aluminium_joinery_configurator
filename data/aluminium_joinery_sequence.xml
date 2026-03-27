@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="seq_aluminium_joinery_configuration" model="ir.sequence">
+        <field name="name">Configuration menuiserie aluminium</field>
+        <field name="code">aluminium.joinery.configuration</field>
+        <field name="prefix">AJC/%(year)s/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False"/>
+    </record>
+</odoo>

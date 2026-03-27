@@ -1,0 +1,21 @@
+"id","name","model_id:id","group_id:id","perm_read","perm_write","perm_create","perm_unlink"
+"access_aluminium_joinery_gamme_user","aluminium.joinery.gamme user","model_aluminium_joinery_gamme","aluminium_joinery_configurator.group_aluminium_joinery_user",1,1,1,0
+"access_aluminium_joinery_gamme_manager","aluminium.joinery.gamme manager","model_aluminium_joinery_gamme","aluminium_joinery_configurator.group_aluminium_joinery_manager",1,1,1,1
+"access_aluminium_joinery_serie_user","aluminium.joinery.serie user","model_aluminium_joinery_serie","aluminium_joinery_configurator.group_aluminium_joinery_user",1,1,1,0
+"access_aluminium_joinery_serie_manager","aluminium.joinery.serie manager","model_aluminium_joinery_serie","aluminium_joinery_configurator.group_aluminium_joinery_manager",1,1,1,1
+"access_aluminium_joinery_modele_user","aluminium.joinery.modele user","model_aluminium_joinery_modele","aluminium_joinery_configurator.group_aluminium_joinery_user",1,1,1,0
+"access_aluminium_joinery_modele_manager","aluminium.joinery.modele manager","model_aluminium_joinery_modele","aluminium_joinery_configurator.group_aluminium_joinery_manager",1,1,1,1
+"access_aluminium_joinery_rule_user","aluminium.joinery.rule user","model_aluminium_joinery_rule","aluminium_joinery_configurator.group_aluminium_joinery_user",1,1,1,0
+"access_aluminium_joinery_rule_manager","aluminium.joinery.rule manager","model_aluminium_joinery_rule","aluminium_joinery_configurator.group_aluminium_joinery_manager",1,1,1,1
+"access_aluminium_joinery_filling_rule_user","aluminium.joinery.filling.rule user","model_aluminium_joinery_filling_rule","aluminium_joinery_configurator.group_aluminium_joinery_user",1,1,1,0
+"access_aluminium_joinery_filling_rule_manager","aluminium.joinery.filling.rule manager","model_aluminium_joinery_filling_rule","aluminium_joinery_configurator.group_aluminium_joinery_manager",1,1,1,1
+"access_aluminium_joinery_configuration_user","aluminium.joinery.configuration user","model_aluminium_joinery_configuration","aluminium_joinery_configurator.group_aluminium_joinery_user",1,1,1,0
+"access_aluminium_joinery_configuration_manager","aluminium.joinery.configuration manager","model_aluminium_joinery_configuration","aluminium_joinery_configurator.group_aluminium_joinery_manager",1,1,1,1
+"access_aluminium_joinery_configuration_line_user","aluminium.joinery.configuration.line user","model_aluminium_joinery_configuration_line","aluminium_joinery_configurator.group_aluminium_joinery_user",1,1,1,0
+"access_aluminium_joinery_configuration_line_manager","aluminium.joinery.configuration.line manager","model_aluminium_joinery_configuration_line","aluminium_joinery_configurator.group_aluminium_joinery_manager",1,1,1,1
+"access_aluminium_joinery_result_line_user","aluminium.joinery.result.line user","model_aluminium_joinery_result_line","aluminium_joinery_configurator.group_aluminium_joinery_user",1,0,0,0
+"access_aluminium_joinery_result_line_manager","aluminium.joinery.result.line manager","model_aluminium_joinery_result_line","aluminium_joinery_configurator.group_aluminium_joinery_manager",1,1,1,1
+"access_aluminium_joinery_material_summary_user","aluminium.joinery.material.summary user","model_aluminium_joinery_material_summary","aluminium_joinery_configurator.group_aluminium_joinery_user",1,0,0,0
+"access_aluminium_joinery_material_summary_manager","aluminium.joinery.material.summary manager","model_aluminium_joinery_material_summary","aluminium_joinery_configurator.group_aluminium_joinery_manager",1,1,1,1
+"access_aluminium_joinery_catalog_import_user","aluminium.joinery.catalog.import user","model_aluminium_joinery_catalog_import","aluminium_joinery_configurator.group_aluminium_joinery_user",1,1,1,0
+"access_aluminium_joinery_catalog_import_manager","aluminium.joinery.catalog.import manager","model_aluminium_joinery_catalog_import","aluminium_joinery_configurator.group_aluminium_joinery_manager",1,1,1,1

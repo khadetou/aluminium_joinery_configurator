@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem
+        id="menu_aluminium_joinery_root"
+        name="Menuiserie Aluminium"
+        sequence="10"
+        action="action_aluminium_joinery_configuration"
+        groups="aluminium_joinery_configurator.group_aluminium_joinery_user"
+        web_icon="aluminium_joinery_configurator,static/description/icon.png"
+    />
+
+    <menuitem id="menu_aluminium_joinery_configuration" name="Configurations" parent="menu_aluminium_joinery_root" action="action_aluminium_joinery_configuration" sequence="10"/>
+
+    <menuitem id="menu_aluminium_joinery_catalog_root" name="Catalogue" parent="menu_aluminium_joinery_root" sequence="20"/>
+    <menuitem id="menu_aluminium_joinery_gamme" name="Gammes" parent="menu_aluminium_joinery_catalog_root" action="action_aluminium_joinery_gamme" sequence="10"/>
+    <menuitem id="menu_aluminium_joinery_serie" name="Series" parent="menu_aluminium_joinery_catalog_root" action="action_aluminium_joinery_serie" sequence="20"/>
+    <menuitem id="menu_aluminium_joinery_modele" name="Modeles" parent="menu_aluminium_joinery_catalog_root" action="action_aluminium_joinery_modele" sequence="30"/>
+    <menuitem id="menu_aluminium_joinery_rule" name="Regles" parent="menu_aluminium_joinery_catalog_root" action="action_aluminium_joinery_rule" sequence="40"/>
+    <menuitem id="menu_aluminium_joinery_filling_rule" name="Remplissages" parent="menu_aluminium_joinery_catalog_root" action="action_aluminium_joinery_filling_rule" sequence="50"/>
+
+</odoo>

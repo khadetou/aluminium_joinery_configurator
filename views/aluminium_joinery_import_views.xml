@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aluminium_joinery_catalog_import_tree" model="ir.ui.view">
+        <field name="name">aluminium.joinery.catalog.import.tree</field>
+        <field name="model">aluminium.joinery.catalog.import</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="filename"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_aluminium_joinery_catalog_import_form" model="ir.ui.view">
+        <field name="name">aluminium.joinery.catalog.import.form</field>
+        <field name="model">aluminium.joinery.catalog.import</field>
+        <field name="arch" type="xml">
+            <form string="Import catalogue industriel">
+                <header>
+                    <button name="action_process_import" type="object" string="Importer le classeur" class="btn-primary" invisible="state != 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,processed,failed"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="filename"/>
+                        <field name="file" filename="filename"/>
+                        <field name="sync_missing_children"/>
+                    </group>
+                    <group>
+                        <field name="import_log" readonly="1"/>
+                    </group>
+                    <group>
+                        <div class="o_form_label">
+                            Importez le classeur industriel genere par le module. Le traitement applique l'ordre Gammes, Articles, Series Complete puis BOMs Complete, et resout les articles par references stables.
+                        </div>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_aluminium_joinery_catalog_import" model="ir.actions.act_window">
+        <field name="name">Import catalogue industriel</field>
+        <field name="res_model">aluminium.joinery.catalog.import</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

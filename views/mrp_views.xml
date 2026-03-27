@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_mrp_bom_form_aluminium_joinery" model="ir.ui.view">
+        <field name="name">mrp.bom.form.aluminium.joinery</field>
+        <field name="model">mrp.bom</field>
+        <field name="inherit_id" ref="mrp.mrp_bom_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/group" position="inside">
+                <field name="joinery_configuration_id" readonly="1"/>
+                <field name="joinery_configuration_line_id" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_mrp_production_form_aluminium_joinery" model="ir.ui.view">
+        <field name="name">mrp.production.form.aluminium.joinery</field>
+        <field name="model">mrp.production</field>
+        <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/group" position="inside">
+                <field name="joinery_configuration_id" readonly="1"/>
+                <field name="joinery_configuration_line_id" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
+

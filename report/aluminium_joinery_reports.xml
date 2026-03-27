@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_aluminium_joinery_fabrication" model="ir.actions.report">
+        <field name="name">Fiche de fabrication</field>
+        <field name="model">aluminium.joinery.configuration</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">aluminium_joinery_configurator.report_aluminium_joinery_fabrication</field>
+        <field name="report_file">aluminium_joinery_configurator.report_aluminium_joinery_fabrication</field>
+        <field name="binding_model_id" ref="model_aluminium_joinery_configuration"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <record id="action_report_aluminium_joinery_material" model="ir.actions.report">
+        <field name="name">Synthese matiere</field>
+        <field name="model">aluminium.joinery.configuration</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">aluminium_joinery_configurator.report_aluminium_joinery_material</field>
+        <field name="report_file">aluminium_joinery_configurator.report_aluminium_joinery_material</field>
+        <field name="binding_model_id" ref="model_aluminium_joinery_configuration"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_aluminium_joinery_fabrication">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Fiche de fabrication - <span t-esc="doc.name"/></h2>
+                        <p t-if="doc.partner_id">Client : <span t-esc="doc.partner_id.display_name"/></p>
+                        <p>Date: <span t-esc="doc.date"/></p>
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Ligne</th>
+                                    <th>Categorie</th>
+                                    <th>Reference</th>
+                                    <th>Designation</th>
+                                    <th>Quantite</th>
+                                    <th>Longueur (mm)</th>
+                                    <th>Largeur (mm)</th>
+                                    <th>Hauteur (mm)</th>
+                                    <th>Coupe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="doc.result_line_ids" t-as="line">
+                                    <td><span t-esc="line.configuration_line_id.sequence"/></td>
+                                    <td><span t-esc="dict(line._fields['category'].selection).get(line.category)"/></td>
+                                    <td><span t-esc="line.ref_text"/></td>
+                                    <td><span t-esc="line.designation"/></td>
+                                    <td class="text-end"><span t-esc="line.qty"/></td>
+                                    <td class="text-end"><span t-esc="line.length_mm"/></td>
+                                    <td class="text-end"><span t-esc="line.width_mm"/></td>
+                                    <td class="text-end"><span t-esc="line.height_mm"/></td>
+                                    <td><span t-esc="line.cut_type"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <template id="report_aluminium_joinery_material">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Synthese matiere - <span t-esc="doc.name"/></h2>
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Categorie</th>
+                                    <th>Reference</th>
+                                    <th>Designation</th>
+                                    <th>Quantite totale</th>
+                                    <th>Longueur totale (mm)</th>
+                                    <th>Largeur (mm)</th>
+                                    <th>Hauteur (mm)</th>
+                                    <th>Barres necessaires</th>
+                                    <th>Prix unitaire</th>
+                                    <th>Montant total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="doc.summary_ids" t-as="line">
+                                    <td><span t-esc="dict(line._fields['category'].selection).get(line.category)"/></td>
+                                    <td><span t-esc="line.ref_text"/></td>
+                                    <td><span t-esc="line.designation"/></td>
+                                    <td class="text-end"><span t-esc="line.total_qty"/></td>
+                                    <td class="text-end"><span t-esc="line.total_length_mm"/></td>
+                                    <td class="text-end"><span t-esc="line.width_mm"/></td>
+                                    <td class="text-end"><span t-esc="line.height_mm"/></td>
+                                    <td class="text-end"><span t-esc="line.bars_required"/></td>
+                                    <td class="text-end"><span t-esc="line.unit_price"/></td>
+                                    <td class="text-end"><span t-esc="line.total_price"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
