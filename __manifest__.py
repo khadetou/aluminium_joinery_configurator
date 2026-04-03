@@ -9,6 +9,7 @@
     "depends": [
         "base",
         "mail",
+        "portal",
         "product",
         "uom",
         "web",
@@ -30,8 +31,14 @@
         "views/project_views.xml",
         "views/mrp_views.xml",
         "views/aluminium_joinery_menu.xml",
+        "views/aluminium_joinery_portal_templates.xml",
         "report/aluminium_joinery_reports.xml",
     ],
+    "assets": {
+        "web.assets_frontend": [
+            "aluminium_joinery_configurator/static/src/scss/joinery_portal.scss",
+        ],
+    },
     "installable": True,
     "application": True,
     "auto_install": False,

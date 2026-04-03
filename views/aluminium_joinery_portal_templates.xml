@@ -1,0 +1,803 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="portal_my_home_joinery" inherit_id="portal.portal_my_home" name="Joinery portal cards" priority="50">
+        <xpath expr="//div[@id='portal_client_category']" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="icon" t-value="'/portal/static/src/img/portal-addresses.svg'"/>
+                <t t-set="title">Mes configurations</t>
+                <t t-set="url" t-value="'/my/configurateur'"/>
+                <t t-set="text">Configurez vos menuiseries, lancez le calcul et preparez votre devis.</t>
+                <t t-set="placeholder_count" t-value="'joinery_configuration_count'"/>
+                <t t-set="show_count" t-value="True"/>
+            </t>
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="icon" t-value="'/sale/static/src/img/bag.svg'"/>
+                <t t-set="title">Mes devis</t>
+                <t t-set="url" t-value="'/my/joinery/quotes'"/>
+                <t t-set="text">Retrouvez les devis generes depuis le configurateur et telechargez-les.</t>
+                <t t-set="placeholder_count" t-value="'joinery_quote_count'"/>
+                <t t-set="show_count" t-value="True"/>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="portal_breadcrumbs_joinery" inherit_id="portal.portal_breadcrumbs" name="Joinery breadcrumbs" priority="50">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name == 'joinery_configurator'" class="breadcrumb-item active">Calculateur de menuiserie</li>
+            <li t-if="page_name == 'joinery_results'" class="breadcrumb-item active">Resultats de configuration</li>
+            <li t-if="page_name == 'joinery_quote_list'" class="breadcrumb-item active">Mes devis</li>
+            <li t-if="page_name == 'joinery_quote_detail'" class="breadcrumb-item active">Devis menuiserie</li>
+        </xpath>
+    </template>
+
+    <template id="portal_sale_order_joinery_backlink" inherit_id="sale.sale_order_portal_template" name="Joinery quote backlink" priority="50">
+        <xpath expr="//div[@id='sale_order_sidebar_button']" position="inside">
+            <a
+                t-if="sale_order.joinery_configuration_id and sale_order.joinery_configuration_id.partner_id.id == request.env.user.partner_id.id"
+                t-att-href="sale_order.joinery_configuration_id.get_portal_results_url()"
+                role="button"
+                class="btn btn-light"
+            >
+                <i class="fa fa-sliders me-1"/>
+                Revenir aux resultats
+            </a>
+        </xpath>
+    </template>
+
+    <template id="portal_joinery_line_form_card" name="Portal Joinery Line Form Card">
+        <div class="border rounded-4 p-3 p-lg-4 bg-white o_ajc_portal_line" t-att-data-line-index="line_index">
+            <input type="hidden" t-att-name="'line_sequence_%s' % line_index" t-att-value="line.get('sequence') or ((int(line_index) + 1) * 10 if str(line_index).isdigit() else '__SEQUENCE__')"/>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div class="fw-semibold">
+                    Ligne <span class="o_ajc_line_position"><t t-out="int(line_index) + 1 if str(line_index).isdigit() else '__DISPLAY__'"/></span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger o_ajc_remove_line">
+                    <i class="fa fa-trash me-1"/>
+                    Supprimer
+                </button>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Gamme</label>
+                    <select class="form-select o_ajc_gamme_select" t-att-name="'line_gamme_id_%s' % line_index" required="required">
+                        <option value="">Choisir une gamme</option>
+                        <t t-foreach="configurator_catalog['gammes']" t-as="gamme">
+                            <option t-att-value="gamme.id" t-att-selected="gamme.id == line.get('gamme_id') and 'selected' or None">
+                                <t t-out="gamme.display_name"/>
+                            </option>
+                        </t>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Serie</label>
+                    <select class="form-select o_ajc_serie_select" t-att-name="'line_serie_id_%s' % line_index" required="required">
+                        <option value="">Choisir une serie</option>
+                        <t t-foreach="configurator_catalog['series']" t-as="serie">
+                            <option
+                                t-att-value="serie.id"
+                                t-att-data-gamme-id="serie.gamme_id.id"
+                                t-att-selected="serie.id == line.get('serie_id') and 'selected' or None"
+                            >
+                                <t t-out="serie.display_name"/>
+                            </option>
+                        </t>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Modele</label>
+                    <select class="form-select o_ajc_modele_select" t-att-name="'line_modele_id_%s' % line_index" required="required">
+                        <option value="">Choisir un modele</option>
+                        <t t-foreach="configurator_catalog['modeles']" t-as="modele">
+                            <option
+                                t-att-value="modele.id"
+                                t-att-data-serie-id="modele.serie_id.id"
+                                t-att-selected="modele.id == line.get('modele_id') and 'selected' or None"
+                            >
+                                <t t-out="modele.display_name"/>
+                            </option>
+                        </t>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Quantite</label>
+                    <input type="number" min="1" max="500" class="form-control" t-att-name="'line_qty_%s' % line_index" t-att-value="line.get('qty') or 1" required="required"/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Largeur (mm)</label>
+                    <input type="number" min="1" step="0.01" class="form-control" t-att-name="'line_width_mm_%s' % line_index" t-att-value="line.get('width_mm') or ''" required="required"/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Hauteur (mm)</label>
+                    <input type="number" min="1" step="0.01" class="form-control" t-att-name="'line_height_mm_%s' % line_index" t-att-value="line.get('height_mm') or ''" required="required"/>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="portal_joinery_render_groups" name="Portal Joinery Render Groups">
+        <t t-if="not groups">
+            <div class="alert alert-light border mb-0">
+                <t t-out="empty_message or 'Aucune donnee disponible pour cette configuration.'"/>
+            </div>
+        </t>
+        <t t-foreach="groups" t-as="group">
+            <section class="o_ajc_group_block mb-4 mb-xl-5">
+                <div class="o_ajc_group_header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 mb-lg-4">
+                    <h3 class="h4 mb-0">GAMME : <span t-out="group['gamme_name']"/></h3>
+                    <span class="badge rounded-pill text-bg-light" t-out="'%s ligne(s)' % len(group['lines'])"/>
+                </div>
+                <t t-foreach="group['lines']" t-as="line">
+                    <div class="card border-0 shadow-sm rounded-4 o_ajc_result_line_card mb-3 mb-lg-4">
+                        <div class="card-body p-4 p-lg-5">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3 mb-lg-4">
+                                <div>
+                                    <div class="text-uppercase small text-muted fw-semibold">Ligne de configuration</div>
+                                    <h4 class="h5 mb-1" t-out="line['label']"/>
+                                    <div class="text-muted">
+                                        <span t-out="line['serie_name']"/> / <span t-out="line['modele_name']"/>
+                                    </div>
+                                </div>
+                                <div class="o_ajc_line_meta small text-muted text-md-end">
+                                    <div><strong>Quantite :</strong> <span t-out="line['qty']"/></div>
+                                    <div><strong>Dimensions :</strong> <span t-out="line['width_mm']"/> x <span t-out="line['height_mm']"/> mm</div>
+                                </div>
+                            </div>
+                            <t t-foreach="line['sections']" t-as="section">
+                                <div t-if="section['rows']" class="o_ajc_section_block mb-4">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                                        <h5 class="h6 text-uppercase text-muted mb-0" t-out="section['title']"/>
+                                        <span class="badge rounded-pill text-bg-light" t-out="'%s ligne(s)' % len(section['rows'])"/>
+                                    </div>
+                                    <t t-call="portal.portal_table">
+                                            <t t-set="classes" t-value="'o_ajc_portal_table_wrap'"/>
+                                            <t t-set="pager" t-value="False"/>
+                                            <thead class="o_ajc_table_head">
+                                                <tr>
+                                                    <t t-foreach="section['headers']" t-as="header">
+                                                        <th scope="col" t-out="header"/>
+                                                    </t>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="section['rows']" t-as="row">
+                                                    <tr>
+                                                        <t t-foreach="row" t-as="cell">
+                                                            <td t-att-class="cell.get('class')" t-out="cell['value']"/>
+                                                        </t>
+                                                    </tr>
+                                                </t>
+                                                <tr t-if="section.get('totals')" class="fw-semibold o_ajc_table_total">
+                                                    <t t-foreach="section['totals']" t-as="cell">
+                                                        <td t-att-class="cell.get('class')" t-out="cell['value']"/>
+                                                    </t>
+                                                </tr>
+                                            </tbody>
+                                    </t>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </t>
+            </section>
+        </t>
+    </template>
+
+    <template id="portal_joinery_history_entries" name="Portal Joinery History Entries">
+        <div t-if="not configurations" class="alert alert-light border mb-0">
+            Aucune configuration n'a encore ete enregistree sur votre portail.
+        </div>
+        <div t-else="" class="d-flex flex-column gap-3">
+            <t t-foreach="configurations" t-as="item">
+                <div t-att-class="'border rounded-4 p-3 %s' % ('border-dark-subtle bg-light-subtle' if history_active_id == item.id else '')">
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div>
+                            <a t-att-href="item.get_portal_url()" class="fw-semibold text-decoration-none">
+                                <span t-out="item.project_name or item.name"/>
+                            </a>
+                            <div class="small text-muted" t-out="item.name"/>
+                            <div class="small mt-1" t-if="item.line_ids">
+                                <span t-out="len(item.line_ids)"/> ligne(s)
+                            </div>
+                        </div>
+                        <span class="badge rounded-pill text-bg-light" t-field="item.state"/>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        <span t-field="item.date" t-options="{'widget': 'date'}"/>
+                        <span t-if="item.sale_order_id" class="ms-2">• devis <t t-out="item.sale_order_id.name"/></span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <a t-att-href="item.get_portal_url()" class="btn btn-sm btn-light">
+                            <i class="fa fa-pencil me-1"/>
+                            Editer
+                        </a>
+                        <a t-if="item.summary_ids" t-att-href="item.get_portal_results_url()" class="btn btn-sm btn-outline-primary">
+                            <i class="fa fa-list-alt me-1"/>
+                            Resultats
+                        </a>
+                        <form t-att-action="'/my/configurateur/%s/duplicate' % item.id" method="post" class="d-inline">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                <i class="fa fa-copy me-1"/>
+                                Dupliquer
+                            </button>
+                        </form>
+                        <a t-if="item.sale_order_id" t-att-href="item.sale_order_id.get_joinery_portal_url()" class="btn btn-sm btn-outline-dark">
+                            <i class="fa fa-file-text-o me-1"/>
+                            Voir le devis
+                        </a>
+                    </div>
+                </div>
+            </t>
+        </div>
+        <div t-if="pager and pager['page_count'] &gt; 1" class="mt-4">
+            <t t-call="portal.pager"/>
+        </div>
+    </template>
+
+    <template id="portal_joinery_history_panel" name="Portal Joinery History Panel">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <span class="text-uppercase small text-muted fw-semibold">Historique</span>
+                        <h3 class="h5 mb-0">Mes configurations</h3>
+                    </div>
+                    <a href="/my/joinery/quotes" class="btn btn-link p-0">Mes devis</a>
+                </div>
+                <t t-call="aluminium_joinery_configurator.portal_joinery_history_entries"/>
+            </div>
+        </div>
+    </template>
+
+    <template id="portal_my_joinery_configurator" name="Portal Joinery Configurator">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Calculateur de menuiserie</t>
+            </t>
+
+            <div class="row g-4">
+                <div class="col-12 col-xl-8">
+                    <div t-if="success_message" class="alert alert-success" role="alert">
+                        <t t-out="success_message"/>
+                    </div>
+                    <div t-if="error_message" class="alert alert-danger" role="alert">
+                        <t t-out="error_message"/>
+                    </div>
+
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-body p-4 p-lg-5">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+                                <div>
+                                    <span class="text-uppercase small text-muted fw-semibold">Configurateur client</span>
+                                    <h2 class="h3 mb-2">Composez votre menuiserie</h2>
+                                    <p class="text-muted mb-0">Ajoutez une ou plusieurs lignes de configuration, calculez-les ensemble, puis generez un devis global depuis une page de resultats dediee.</p>
+                                </div>
+                                <div t-if="configuration" class="text-end">
+                                    <div class="small text-muted">Configuration</div>
+                                    <div class="fw-semibold" t-out="configuration.name"/>
+                                    <div t-if="configuration.project_name" class="text-muted small" t-out="configuration.project_name"/>
+                                </div>
+                            </div>
+
+                            <form action="/my/configurateur/calculate" method="post" class="o_ajc_portal_form">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="hidden" name="configuration_id" t-att-value="form_values.get('configuration_id') or ''"/>
+
+                                <div class="border rounded-4 p-4 mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h3 class="h5 mb-0">1. Informations generales</h3>
+                                        <span class="badge rounded-pill text-bg-light">Projet</span>
+                                    </div>
+                                    <label class="form-label" for="ajc_project_name">Nom du projet</label>
+                                    <input type="text" class="form-control" id="ajc_project_name" name="project_name" t-att-value="form_values.get('project_name') or ''" placeholder="Ex: Villa Almadies - facade principale"/>
+                                </div>
+
+                                <div class="border rounded-4 p-4">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                                        <div>
+                                            <h3 class="h5 mb-1">2. Lignes de configuration</h3>
+                                            <p class="text-muted mb-0">Chaque ligne correspond a une menuiserie a calculer dans la meme configuration.</p>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary" id="ajc_add_line_btn">
+                                            <i class="fa fa-plus me-1"/>
+                                            Ajouter une ligne
+                                        </button>
+                                    </div>
+
+                                    <div id="ajc_portal_lines" class="d-flex flex-column gap-3">
+                                        <t t-foreach="form_values.get('lines') or []" t-as="line">
+                                            <t t-set="line_index" t-value="line_index"/>
+                                            <t t-call="aluminium_joinery_configurator.portal_joinery_line_form_card"/>
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2 mt-4">
+                                    <button type="submit" formaction="/my/configurateur/save" class="btn btn-outline-secondary btn-lg">
+                                        <i class="fa fa-save me-1"/>
+                                        Enregistrer le brouillon
+                                    </button>
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fa fa-calculator me-1"/>
+                                        Calculer toutes les lignes
+                                    </button>
+                                    <a t-if="configuration and configuration.summary_ids" t-att-href="configuration.get_portal_results_url()" class="btn btn-dark btn-lg">
+                                        <i class="fa fa-list-alt me-1"/>
+                                        Voir les resultats
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-4">
+                    <t t-call="aluminium_joinery_configurator.portal_joinery_history_panel"/>
+                </div>
+            </div>
+
+            <div id="ajc_portal_line_template" class="d-none">
+                <t t-set="line_index" t-value="'__INDEX__'"/>
+                <t t-set="line" t-value="{'sequence': '__SEQUENCE__', 'gamme_id': False, 'serie_id': False, 'modele_id': False, 'qty': 1, 'width_mm': '', 'height_mm': ''}"/>
+                <t t-call="aluminium_joinery_configurator.portal_joinery_line_form_card"/>
+            </div>
+
+            <script type="text/javascript">
+                document.addEventListener("DOMContentLoaded", function () {
+                    const linesContainer = document.getElementById("ajc_portal_lines");
+                    const addButton = document.getElementById("ajc_add_line_btn");
+                    const template = document.getElementById("ajc_portal_line_template");
+                    if (!linesContainer || !addButton || !template) {
+                        return;
+                    }
+
+                    const syncRow = (row) =&gt; {
+                        const gammeSelect = row.querySelector(".o_ajc_gamme_select");
+                        const serieSelect = row.querySelector(".o_ajc_serie_select");
+                        const modeleSelect = row.querySelector(".o_ajc_modele_select");
+                        if (!gammeSelect || !serieSelect || !modeleSelect) {
+                            return;
+                        }
+
+                        const gammeId = gammeSelect.value;
+                        let selectedSerieVisible = false;
+                        Array.from(serieSelect.options).forEach((option) =&gt; {
+                            if (!option.value) {
+                                option.hidden = false;
+                                return;
+                            }
+                            const visible = !gammeId || option.dataset.gammeId === gammeId;
+                            option.hidden = !visible;
+                            if (!visible &amp;&amp; option.selected) {
+                                option.selected = false;
+                            }
+                            if (visible &amp;&amp; option.selected) {
+                                selectedSerieVisible = true;
+                            }
+                        });
+                        if (!selectedSerieVisible) {
+                            serieSelect.value = "";
+                        }
+
+                        const serieId = serieSelect.value;
+                        let selectedModeleVisible = false;
+                        Array.from(modeleSelect.options).forEach((option) =&gt; {
+                            if (!option.value) {
+                                option.hidden = false;
+                                return;
+                            }
+                            const visible = !serieId || option.dataset.serieId === serieId;
+                            option.hidden = !visible;
+                            if (!visible &amp;&amp; option.selected) {
+                                option.selected = false;
+                            }
+                            if (visible &amp;&amp; option.selected) {
+                                selectedModeleVisible = true;
+                            }
+                        });
+                        if (!selectedModeleVisible) {
+                            modeleSelect.value = "";
+                        }
+                    };
+
+                    const refreshLabels = () =&gt; {
+                        Array.from(linesContainer.querySelectorAll(".o_ajc_portal_line")).forEach((row, index) =&gt; {
+                            const label = row.querySelector(".o_ajc_line_position");
+                            if (label) {
+                                label.textContent = String(index + 1);
+                            }
+                            const removeButton = row.querySelector(".o_ajc_remove_line");
+                            if (removeButton) {
+                                removeButton.disabled = linesContainer.querySelectorAll(".o_ajc_portal_line").length &lt;= 1;
+                            }
+                        });
+                    };
+
+                    const initRow = (row) =&gt; {
+                        const gammeSelect = row.querySelector(".o_ajc_gamme_select");
+                        const serieSelect = row.querySelector(".o_ajc_serie_select");
+                        if (gammeSelect) {
+                            gammeSelect.addEventListener("change", () =&gt; syncRow(row));
+                        }
+                        if (serieSelect) {
+                            serieSelect.addEventListener("change", () =&gt; syncRow(row));
+                        }
+                        syncRow(row);
+                    };
+
+                    Array.from(linesContainer.querySelectorAll(".o_ajc_portal_line")).forEach(initRow);
+                    refreshLabels();
+
+                    addButton.addEventListener("click", function () {
+                        const indices = Array.from(linesContainer.querySelectorAll(".o_ajc_portal_line")).map((row) =&gt; parseInt(row.dataset.lineIndex || "0", 10)).filter((value) =&gt; !Number.isNaN(value));
+                        const nextIndex = indices.length ? Math.max.apply(null, indices) + 1 : 0;
+                        const nextSequence = (nextIndex + 1) * 10;
+                        const wrapper = document.createElement("div");
+                        wrapper.innerHTML = template.innerHTML
+                            .replace(/__INDEX__/g, String(nextIndex))
+                            .replace(/__DISPLAY__/g, String(linesContainer.querySelectorAll(".o_ajc_portal_line").length + 1))
+                            .replace(/__SEQUENCE__/g, String(nextSequence))
+                            .trim();
+                        const newRow = wrapper.firstElementChild;
+                        if (!newRow) {
+                            return;
+                        }
+                        linesContainer.appendChild(newRow);
+                        initRow(newRow);
+                        refreshLabels();
+                    });
+
+                    linesContainer.addEventListener("click", function (event) {
+                        const button = event.target.closest(".o_ajc_remove_line");
+                        if (!button) {
+                            return;
+                        }
+                        const rows = linesContainer.querySelectorAll(".o_ajc_portal_line");
+                        if (rows.length &lt;= 1) {
+                            return;
+                        }
+                        const row = button.closest(".o_ajc_portal_line");
+                        if (row) {
+                            row.remove();
+                            refreshLabels();
+                        }
+                    });
+                });
+            </script>
+        </t>
+    </template>
+
+    <template id="portal_my_joinery_results" name="Portal Joinery Results">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Resultats de configuration</t>
+            </t>
+
+            <div class="o_ajc_results_page">
+                    <div t-if="success_message" class="alert alert-success" role="alert">
+                        <t t-out="success_message"/>
+                        <a t-if="quote_url" t-att-href="quote_url" class="alert-link ms-2">Voir le devis</a>
+                    </div>
+                    <div t-if="error_message" class="alert alert-danger" role="alert">
+                        <t t-out="error_message"/>
+                    </div>
+
+                    <div class="card border-0 shadow-sm rounded-4 o_ajc_results_hero mb-4 mb-lg-5">
+                        <div class="card-body p-4 p-lg-5">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+                                <div>
+                                    <span class="text-uppercase small text-muted fw-semibold">Configuration calculee</span>
+                                    <h2 class="h3 mb-2" t-out="configuration.project_name or configuration.name"/>
+                                    <p class="text-muted mb-0">Consultez les resultats par ligne, verifiez la synthese matiere puis generez le devis global de cette configuration.</p>
+                                </div>
+                            </div>
+                            <div class="row g-3 o_ajc_results_metrics mb-4">
+                                <div class="col-12 col-md-4">
+                                    <div class="o_ajc_metric_card h-100">
+                                        <span class="o_ajc_metric_label">Reference</span>
+                                        <strong class="o_ajc_metric_value" t-out="configuration.name"/>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <div class="o_ajc_metric_card h-100">
+                                        <span class="o_ajc_metric_label">Statut</span>
+                                        <strong class="o_ajc_metric_value" t-field="configuration.state"/>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <div class="o_ajc_metric_card h-100">
+                                        <span class="o_ajc_metric_label">Date</span>
+                                        <strong class="o_ajc_metric_value" t-field="configuration.date" t-options="{'widget': 'date'}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 o_ajc_results_actions">
+                                <a t-att-href="configuration.get_portal_url()" class="btn btn-outline-secondary">
+                                    <i class="fa fa-pencil me-1"/>
+                                    Modifier la configuration
+                                </a>
+                                <form action="/my/configurateur/calculate" method="post" class="d-inline">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <input type="hidden" name="configuration_id" t-att-value="configuration.id"/>
+                                    <button type="submit" class="btn btn-outline-primary">
+                                        <i class="fa fa-refresh me-1"/>
+                                        Recalculer
+                                    </button>
+                                </form>
+                                <a t-if="material_summary_pdf_url" t-att-href="material_summary_pdf_url" class="btn btn-outline-dark" target="_blank">
+                                    <i class="fa fa-download me-1"/>
+                                    Telecharger la synthese matiere
+                                </a>
+                                <button type="button" class="btn btn-light" data-bs-toggle="offcanvas" data-bs-target="#ajcResultsHistoryPanel" aria-controls="ajcResultsHistoryPanel">
+                                    <i class="fa fa-history me-1"/>
+                                    Historique
+                                </button>
+                                <form action="/my/configurateur/quote" method="post" class="d-inline">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <input type="hidden" name="configuration_id" t-att-value="configuration.id"/>
+                                    <button type="submit" class="btn btn-dark" t-att-disabled="None if can_generate_quote else 'disabled'">
+                                        <i class="fa fa-file-text-o me-1"/>
+                                        Generer le devis
+                                    </button>
+                                </form>
+                                <a t-if="quote_url" t-att-href="quote_url" class="btn btn-light">
+                                    <i class="fa fa-external-link me-1"/>
+                                    Voir le devis
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm rounded-4 o_ajc_results_section_card mb-4">
+                        <div class="card-body p-4 p-lg-5">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <span class="text-uppercase small text-muted fw-semibold">Lecture detaillee</span>
+                                    <h3 class="h4 mb-0">Resultats calcules</h3>
+                                </div>
+                            </div>
+                            <t t-set="groups" t-value="result_groups"/>
+                            <t t-set="empty_message" t-value="'Aucun resultat detaille n est disponible pour cette configuration.'"/>
+                            <t t-call="aluminium_joinery_configurator.portal_joinery_render_groups"/>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm rounded-4 o_ajc_results_section_card mb-4">
+                        <div class="card-body p-4 p-lg-5">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                                <div>
+                                    <span class="text-uppercase small text-muted fw-semibold">Vision matiere</span>
+                                    <h3 class="h4 mb-0">Synthese matiere</h3>
+                                </div>
+                                <a t-if="material_summary_pdf_url" t-att-href="material_summary_pdf_url" class="btn btn-outline-dark btn-sm" target="_blank">
+                                    <i class="fa fa-download me-1"/>
+                                    Exporter la synthese matiere
+                                </a>
+                            </div>
+                            <t t-set="groups" t-value="summary_groups"/>
+                            <t t-set="empty_message" t-value="'La synthese matiere sera disponible apres calcul.'"/>
+                            <t t-call="aluminium_joinery_configurator.portal_joinery_render_groups"/>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm rounded-4 o_ajc_results_section_card">
+                        <div class="card-body p-4 p-lg-5">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <span class="text-uppercase small text-muted fw-semibold">Preparation atelier</span>
+                                    <h3 class="h4 mb-0">Apercu production</h3>
+                                </div>
+                            </div>
+                            <t t-set="groups" t-value="production_groups"/>
+                            <t t-set="empty_message" t-value="'Aucun apercu de production n est encore disponible.'"/>
+                            <t t-call="aluminium_joinery_configurator.portal_joinery_render_groups"/>
+                        </div>
+                    </div>
+            </div>
+
+            <div class="offcanvas offcanvas-end o_ajc_history_offcanvas" tabindex="-1" id="ajcResultsHistoryPanel" aria-labelledby="ajcResultsHistoryPanelLabel">
+                <div class="offcanvas-header align-items-start">
+                    <div>
+                        <span class="text-uppercase small text-muted fw-semibold">Historique</span>
+                        <h3 class="h4 mb-0" id="ajcResultsHistoryPanelLabel">Mes configurations</h3>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"/>
+                </div>
+                <div class="offcanvas-body pt-0">
+                    <div class="d-flex justify-content-end mb-3">
+                        <a href="/my/joinery/quotes" class="btn btn-link p-0">Mes devis</a>
+                    </div>
+                    <t t-call="aluminium_joinery_configurator.portal_joinery_history_entries"/>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="portal_my_joinery_quote_page" name="Portal Joinery Quote Page">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Devis menuiserie</t>
+            </t>
+
+            <div class="row justify-content-center">
+                <div class="col-12 col-xxl-10">
+                    <div t-if="success_message" class="alert alert-success" role="alert">
+                        <t t-out="success_message"/>
+                    </div>
+
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-body p-4 p-lg-5">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+                                <div>
+                                    <span class="text-uppercase small text-muted fw-semibold">Document commercial</span>
+                                    <h2 class="h3 mb-1" t-out="quote.name"/>
+                                    <div class="text-muted">
+                                        <span t-field="quote.date_order" t-options="{'widget': 'date'}"/>
+                                        <span class="mx-2">•</span>
+                                        <span t-out="quote.partner_id.display_name"/>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge rounded-pill text-bg-light" t-out="quote.state"/>
+                                    <div class="display-6 fw-semibold mt-2">
+                                        <span t-field="quote.amount_total"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2 mb-4">
+                                <a t-att-href="quote.get_portal_url(report_type='pdf')" class="btn btn-dark" target="_blank">
+                                    <i class="fa fa-download me-1"/>
+                                    Telecharger le PDF
+                                </a>
+                                <a t-if="configuration" t-att-href="configuration.get_portal_results_url()" class="btn btn-outline-secondary">
+                                    <i class="fa fa-arrow-left me-1"/>
+                                    Revenir aux resultats
+                                </a>
+                                <a t-if="configuration" t-att-href="configuration.get_portal_url()" class="btn btn-light">
+                                    <i class="fa fa-pencil me-1"/>
+                                    Modifier la configuration
+                                </a>
+                            </div>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <div class="border rounded-4 p-3 h-100">
+                                        <div class="small text-muted">Projet</div>
+                                        <div class="fw-semibold" t-out="configuration.project_name if configuration else '-'"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="border rounded-4 p-3 h-100">
+                                        <div class="small text-muted">Configuration</div>
+                                        <div class="fw-semibold" t-out="configuration.name if configuration else '-'"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="border rounded-4 p-3 h-100">
+                                        <div class="small text-muted">Lignes de configuration</div>
+                                        <div class="fw-semibold" t-out="len(configuration.line_ids) if configuration else 0"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <t t-call="portal.portal_table">
+                                    <thead>
+                                        <tr>
+                                            <th>Description</th>
+                                            <th class="text-end">Quantite</th>
+                                            <th>Unite</th>
+                                            <th class="text-end">PU</th>
+                                            <th class="text-end">Sous-total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="quote.order_line" t-as="line">
+                                            <tr t-if="not line.display_type">
+                                                <td>
+                                                    <div class="fw-semibold" t-out="line.name"/>
+                                                    <div t-if="line.product_id" class="small text-muted">
+                                                        <span t-out="line.product_id.default_code or line.product_id.display_name"/>
+                                                    </div>
+                                                </td>
+                                                <td class="text-end">
+                                                    <span t-field="line.product_uom_qty"/>
+                                                </td>
+                                                <td>
+                                                    <span t-out="line.product_uom_id.display_name if line.product_uom_id else '-'"/>
+                                                </td>
+                                                <td class="text-end">
+                                                    <span t-field="line.price_unit"/>
+                                                </td>
+                                                <td class="text-end">
+                                                    <span t-field="line.price_subtotal"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div t-if="summary_groups" class="card border-0 shadow-sm rounded-4">
+                        <div class="card-body p-4 p-lg-5">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <span class="text-uppercase small text-muted fw-semibold">Synthese associee</span>
+                                    <h3 class="h4 mb-0">Resume technique de la configuration</h3>
+                                </div>
+                            </div>
+                            <t t-set="groups" t-value="summary_groups"/>
+                            <t t-set="empty_message" t-value="'Aucune synthese technique n est disponible pour ce devis.'"/>
+                            <t t-call="aluminium_joinery_configurator.portal_joinery_render_groups"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="portal_my_joinery_quotes" name="Portal Joinery Quotes">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Mes devis</t>
+            </t>
+
+            <div t-if="not quotes" class="alert alert-warning" role="alert">
+                Aucun devis menuiserie n'a encore ete genere depuis votre portail.
+            </div>
+
+            <t t-if="quotes" t-call="portal.portal_table">
+                <thead>
+                    <tr>
+                        <th>Devis</th>
+                        <th>Configuration</th>
+                        <th class="text-end">Date</th>
+                        <th class="text-end">Montant</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-foreach="quotes" t-as="quote">
+                        <tr>
+                            <td>
+                                <a t-att-href="quote.get_joinery_portal_url()">
+                                    <span t-out="quote.name"/>
+                                </a>
+                                <div class="small text-muted" t-out="quote.state"/>
+                            </td>
+                            <td>
+                                <a t-if="quote.joinery_configuration_id" t-att-href="quote.joinery_configuration_id.get_portal_results_url()">
+                                    <span t-out="quote.joinery_configuration_id.project_name or quote.joinery_configuration_id.name"/>
+                                </a>
+                                <span t-else="">-</span>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="quote.date_order" t-options="{'widget': 'date'}"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="quote.amount_total"/>
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex flex-wrap justify-content-end gap-2">
+                                    <a t-att-href="quote.get_joinery_portal_url()" class="btn btn-sm btn-light">
+                                        Ouvrir
+                                    </a>
+                                    <a t-att-href="quote.get_portal_url(report_type='pdf')" class="btn btn-sm btn-outline-dark" target="_blank">
+                                        PDF
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </t>
+                </tbody>
+            </t>
+        </t>
+    </template>
+</odoo>

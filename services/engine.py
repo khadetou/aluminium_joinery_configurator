@@ -79,6 +79,7 @@ class JoineryEngine:
     def aggregate_materials(self, configuration):
         grouped = defaultdict(
             lambda: {
+                "configuration_line_id": False,
                 "total_qty": 0.0,
                 "total_length_mm": 0.0,
                 "width_mm": 0.0,
@@ -94,12 +95,14 @@ class JoineryEngine:
         )
         for result in configuration.result_line_ids:
             key = (
+                result.configuration_line_id.id or 0,
                 result.category,
                 result.gamme_id.id or 0,
                 result.product_id.id or 0,
                 result.ref_text or "",
             )
             data = grouped[key]
+            data["configuration_line_id"] = result.configuration_line_id.id
             data["designation"] = result.designation
             data["ref_text"] = result.ref_text
             data["product_id"] = result.product_id.id
@@ -120,6 +123,7 @@ class JoineryEngine:
             summary_vals.append(
                 {
                     "configuration_id": configuration.id,
+                    "configuration_line_id": data["configuration_line_id"] or False,
                     "gamme_id": data["gamme_id"] or False,
                     "product_id": data["product_id"] or False,
                     "category": data["category"],

@@ -6,6 +6,7 @@
         <field name="arch" type="xml">
             <list>
                 <field name="name"/>
+                <field name="project_name"/>
                 <field name="partner_id"/>
                 <field name="date"/>
                 <field name="state"/>
@@ -23,6 +24,7 @@
         <field name="arch" type="xml">
             <search>
                 <field name="name"/>
+                <field name="project_name"/>
                 <field name="partner_id"/>
                 <field name="state"/>
                 <filter name="filter_draft" string="Brouillon" domain="[('state', '=', 'draft')]"/>
@@ -56,6 +58,7 @@
                     <group>
                         <group>
                             <field name="name" readonly="1"/>
+                            <field name="project_name"/>
                             <field name="partner_id"/>
                             <field name="date"/>
                             <field name="company_id" groups="base.group_multi_company"/>
@@ -84,59 +87,67 @@
                             </field>
                         </page>
                         <page string="Resultats calcules">
-                            <field name="result_line_ids" readonly="1">
-                                <list>
-                                    <field name="configuration_line_id"/>
-                                    <field name="category"/>
-                                    <field name="ref_text"/>
-                                    <field name="designation"/>
-                                    <field name="qty"/>
-                                    <field name="length_mm"/>
-                                    <field name="width_mm"/>
-                                    <field name="height_mm"/>
-                                    <field name="cut_type"/>
-                                </list>
-                            </field>
+                            <notebook>
+                                <page string="Vue metier">
+                                    <field name="results_structured_html" widget="html" nolabel="1" readonly="1"/>
+                                </page>
+                                <page string="Donnees brutes">
+                                    <field name="result_line_ids" readonly="1">
+                                        <list>
+                                            <field name="configuration_line_id"/>
+                                            <field name="category"/>
+                                            <field name="ref_text"/>
+                                            <field name="designation"/>
+                                            <field name="qty"/>
+                                            <field name="length_mm"/>
+                                            <field name="width_mm"/>
+                                            <field name="height_mm"/>
+                                            <field name="cut_type"/>
+                                        </list>
+                                    </field>
+                                </page>
+                            </notebook>
                         </page>
                         <page string="Synthese matiere">
-                            <field name="summary_ids" readonly="1">
-                                <list>
-                                    <field name="category"/>
-                                    <field name="gamme_id"/>
-                                    <field name="ref_text"/>
-                                    <field name="designation"/>
-                                    <field name="total_qty"/>
-                                    <field name="total_length_mm"/>
-                                    <field name="width_mm"/>
-                                    <field name="height_mm"/>
-                                    <field name="bars_required"/>
-                                    <field name="unit_price"/>
-                                    <field name="total_price"/>
-                                </list>
-                            </field>
+                            <notebook>
+                                <page string="Vue metier">
+                                    <field name="summary_structured_html" widget="html" nolabel="1" readonly="1"/>
+                                </page>
+                                <page string="Donnees brutes">
+                                    <field name="summary_ids" readonly="1">
+                                        <list>
+                                            <field name="configuration_line_id"/>
+                                            <field name="category"/>
+                                            <field name="gamme_id"/>
+                                            <field name="ref_text"/>
+                                            <field name="designation"/>
+                                            <field name="total_qty"/>
+                                            <field name="total_length_mm"/>
+                                            <field name="width_mm"/>
+                                            <field name="height_mm"/>
+                                            <field name="bars_required"/>
+                                            <field name="unit_price"/>
+                                            <field name="total_price"/>
+                                        </list>
+                                    </field>
+                                </page>
+                            </notebook>
                         </page>
                         <page string="Apercu production">
-                            <label for="result_line_ids" string="Composants de production calcules"/>
-                            <field name="result_line_ids" readonly="1">
-                                <list>
-                                    <field name="configuration_line_id"/>
-                                    <field name="category"/>
-                                    <field name="product_id"/>
-                                    <field name="ref_text"/>
-                                    <field name="designation"/>
-                                    <field name="qty"/>
-                                    <field name="length_mm"/>
-                                    <field name="width_mm"/>
-                                    <field name="height_mm"/>
-                                </list>
-                            </field>
-                            <field name="bom_ids" readonly="1">
-                                <list>
-                                    <field name="code"/>
-                                    <field name="product_tmpl_id"/>
-                                    <field name="joinery_configuration_line_id"/>
-                                </list>
-                            </field>
+                            <notebook>
+                                <page string="Vue atelier">
+                                    <field name="production_structured_html" widget="html" nolabel="1" readonly="1"/>
+                                </page>
+                                <page string="Nomenclatures liees">
+                                    <field name="bom_ids" readonly="1">
+                                        <list>
+                                            <field name="code"/>
+                                            <field name="product_tmpl_id"/>
+                                            <field name="joinery_configuration_line_id"/>
+                                        </list>
+                                    </field>
+                                </page>
+                            </notebook>
                         </page>
                         <page string="Notes">
                             <field name="note"/>

@@ -949,6 +949,10 @@ def model_product_xmlid(gamme: str, serie: str, modele: str) -> str:
     return build_xmlid("product_tmpl", "cfg", gamme, serie, modele)
 
 
+def generated_filling_product_code(gamme: str, serie: str, modele: str, fill_index: str) -> str:
+    return f"FILL__{slugify_code(serie)}__{slugify_code(modele)}__{fill_index}".upper()
+
+
 def read_inventory_rows() -> list[dict[str, str]]:
     with CSV_INVENTORY.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
@@ -978,6 +982,8 @@ def build_inventory_rows(catalog: dict[str, object]) -> dict[str, list[list[obje
     for row in inventory_rows:
         normalized_code = normalize_default_code(row["default_code"])
         element_type = row["element_type"]
+        if element_type == "remplissage" and not normalized_code:
+            normalized_code = generated_filling_product_code(row["gamme"], row["serie"], row["modele"], row["row_index"])
         if normalized_code:
             meta = article_meta.setdefault(
                 normalized_code,
@@ -986,11 +992,17 @@ def build_inventory_rows(catalog: dict[str, object]) -> dict[str, list[list[obje
                     "name": "",
                     "joinery_item_type": item_type_from_element(element_type),
                     "joinery_bar_length_mm": 5800 if element_type == "profil" else 0,
-                    "uom_id": "uom.product_uom_meter" if element_type == "joint" else "uom.product_uom_unit",
+                    "uom_id": (
+                        "uom.product_uom_meter"
+                        if element_type in ("profil", "joint")
+                        else "uom.product_uom_square_meter"
+                        if element_type == "remplissage"
+                        else "uom.product_uom_unit"
+                    ),
                     "joinery_usage_role": slugify_code(row["article_label"] or normalized_code),
                     "is_joinery_composite": 0,
                     "manufacturing_mode": "standard",
-                    "sale_ok": 1 if element_type == "accessoire" else 0,
+                    "sale_ok": 1 if element_type in ("profil", "accessoire", "joint", "remplissage") else 0,
                     "purchase_ok": 1,
                 },
             )
@@ -1032,7 +1044,7 @@ def build_inventory_rows(catalog: dict[str, object]) -> dict[str, list[list[obje
         "name",
         "type",
         "uom_id/id",
-        "uom_po_id/id",
+        "categ_id/id",
         "sale_ok",
         "purchase_ok",
         "joinery_item_type",
@@ -1051,7 +1063,7 @@ def build_inventory_rows(catalog: dict[str, object]) -> dict[str, list[list[obje
                 meta["name"],
                 "consu",
                 meta["uom_id"],
-                meta["uom_id"],
+                "product.product_category_goods",
                 meta["sale_ok"],
                 meta["purchase_ok"],
                 meta["joinery_item_type"],
@@ -1498,6 +1510,7 @@ def build_filling_payload(gamme: str, serie: str, modele: str, fill_index: str, 
         normalize_default_code(width.get("default_code"))
         or normalize_default_code(height.get("default_code"))
         or normalize_default_code(qty.get("default_code"))
+        or generated_filling_product_code(gamme, serie, modele, fill_index)
     )
     return {
         "id": build_xmlid("filling_rule", serie, modele, fill_index),

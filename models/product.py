@@ -13,6 +13,15 @@ ITEM_TYPE_SELECTION = [
     ("service", "Service"),
 ]
 
+JOINERY_ITEM_UOM_XMLID = {
+    "profile": "uom.product_uom_meter",
+    "joint": "uom.product_uom_meter",
+    "filling": "uom.product_uom_square_meter",
+    "accessory": "uom.product_uom_unit",
+    "finished": "uom.product_uom_unit",
+    "service": "uom.product_uom_unit",
+}
+
 
 def _slugify_placeholder_code(value):
     normalized = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii").lower()
@@ -32,6 +41,32 @@ def _ensure_import_xmlid(env, model_name, res_id, xmlid_name):
         data.write(vals)
     else:
         env["ir.model.data"].sudo().create(vals)
+
+
+def _resolve_joinery_item_type(vals, template=None):
+    return (
+        vals.get("joinery_item_type")
+        or vals.get("schuller_item_type")
+        or vals.get("ajc_item_type")
+        or (template.joinery_item_type if template else False)
+        or (template.schuller_item_type if template else False)
+        or (template.ajc_item_type if template else False)
+    )
+
+
+def _apply_joinery_product_defaults(env, vals, template=None):
+    prepared = dict(vals)
+    item_type = _resolve_joinery_item_type(prepared, template=template)
+    uom_xmlid = JOINERY_ITEM_UOM_XMLID.get(item_type)
+    if uom_xmlid:
+        uom = env.ref(uom_xmlid)
+        if "uom_id" not in prepared and not template:
+            prepared["uom_id"] = uom.id
+    if item_type and "sale_ok" not in prepared and item_type != "service":
+        prepared["sale_ok"] = True
+    if item_type and "purchase_ok" not in prepared and item_type != "service":
+        prepared["purchase_ok"] = True
+    return prepared
 
 
 def _resolve_product_variant_by_default_code(env, default_code, *, create_placeholder=False, template_vals=None):
@@ -95,6 +130,10 @@ class ProductTemplate(models.Model):
         string="Mode de fabrication menuiserie",
         default="standard",
     )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        return super().create([_apply_joinery_product_defaults(self.env, vals) for vals in vals_list])
 
     @api.model
     def get_import_templates(self):

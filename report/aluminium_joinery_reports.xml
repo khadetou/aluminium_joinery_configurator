@@ -20,42 +20,242 @@
         <field name="binding_type">report</field>
     </record>
 
+    <template id="report_aluminium_joinery_styles">
+        <style>
+            .ajc-report-title {
+                font-size: 26px;
+                font-weight: 700;
+                margin-bottom: 6px;
+            }
+            .ajc-report-subtitle {
+                color: #5f6368;
+                margin-bottom: 18px;
+            }
+            .ajc-gamme-block {
+                margin-top: 18px;
+                margin-bottom: 18px;
+                page-break-inside: avoid;
+            }
+            .ajc-gamme-title {
+                border-bottom: 2px solid #222;
+                font-size: 18px;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+                margin-bottom: 12px;
+                padding-bottom: 4px;
+                text-transform: uppercase;
+            }
+            .ajc-line-card {
+                border: 1px solid #c7d0d9;
+                border-radius: 0;
+                margin-bottom: 16px;
+                overflow: visible;
+                page-break-inside: avoid;
+                background: #fff;
+            }
+            .ajc-line-header {
+                background: #f5f6f7;
+                border-bottom: 1px solid #c7d0d9;
+                padding: 10px 12px;
+            }
+            .ajc-line-title {
+                font-size: 15px;
+                font-weight: 700;
+                margin-bottom: 8px;
+            }
+            .ajc-meta-table {
+                width: 100%;
+                table-layout: fixed;
+                border-collapse: collapse;
+                border-spacing: 0;
+                font-size: 12px;
+                border: 1px solid #b8c1cc;
+                background: #fff;
+            }
+            .ajc-meta-table td {
+                border: 1px solid #cfd6de;
+                padding: 6px 8px;
+                vertical-align: top;
+            }
+            .ajc-meta-label {
+                background: #f3f5f7;
+                font-weight: 700;
+                width: 16%;
+            }
+            .ajc-meta-value {
+                width: 34%;
+            }
+            .ajc-line-body {
+                padding: 12px;
+            }
+            .ajc-section {
+                margin-bottom: 14px;
+            }
+            .ajc-section-title {
+                font-size: 14px;
+                font-weight: 700;
+                margin-bottom: 6px;
+                text-transform: uppercase;
+            }
+            .ajc-report-table {
+                width: 100%;
+                table-layout: fixed;
+                border-collapse: collapse;
+                border-spacing: 0;
+                font-size: 11px;
+                border: 1px solid #cfd8dc;
+                background: #fff;
+            }
+            .ajc-report-table thead th {
+                background: #eceff1;
+                border: 1px solid #cfd8dc;
+                font-weight: 700;
+                padding: 6px 8px;
+            }
+            .ajc-report-table tbody td,
+            .ajc-report-table tfoot td {
+                border: 1px solid #dfe4e8;
+                padding: 5px 8px;
+            }
+            .ajc-report-table tfoot td {
+                background: #fafafa;
+                font-weight: 700;
+            }
+            .ajc-no-data {
+                color: #6c757d;
+                font-style: italic;
+                margin-bottom: 10px;
+            }
+            .text-end {
+                text-align: right;
+            }
+            .fw-bold {
+                font-weight: 700;
+            }
+            .ajc-page-break {
+                page-break-before: always;
+            }
+        </style>
+    </template>
+
+    <template id="report_aluminium_joinery_document_intro">
+        <div class="mb-4">
+            <div class="ajc-report-title">
+                <span t-out="title"/>
+            </div>
+            <div class="ajc-report-subtitle">
+                <span t-out="doc.name"/>
+                <t t-if="doc.partner_id">
+                    <span> - </span>
+                    <span t-field="doc.partner_id"/>
+                </t>
+                <span> - </span>
+                <span t-field="doc.date"/>
+            </div>
+            <table class="ajc-meta-table">
+                <tbody>
+                    <tr>
+                        <td class="ajc-meta-label">Configuration</td>
+                        <td class="ajc-meta-value"><span t-out="doc.name"/></td>
+                        <td class="ajc-meta-label">Client</td>
+                        <td class="ajc-meta-value"><span t-out="doc.partner_id.display_name if doc.partner_id else '-'"/></td>
+                    </tr>
+                    <tr>
+                        <td class="ajc-meta-label">Nombre de lignes</td>
+                        <td class="ajc-meta-value"><span t-out="len(doc.line_ids)"/></td>
+                        <td class="ajc-meta-label">Statut</td>
+                        <td class="ajc-meta-value"><span t-out="dict(doc._fields['state'].selection).get(doc.state)"/></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </template>
+
+    <template id="report_aluminium_joinery_section_table">
+        <div class="ajc-section">
+            <div class="ajc-section-title">
+                <span t-out="section['title']"/>
+            </div>
+            <t t-if="section['rows']">
+                <table class="ajc-report-table">
+                    <thead>
+                        <tr>
+                            <th t-foreach="section['headers']" t-as="header">
+                                <span t-out="header"/>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="section['rows']" t-as="row">
+                            <td t-foreach="row" t-as="cell" t-att-class="cell.get('class', '')">
+                                <span t-out="cell.get('value', '')"/>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot t-if="section.get('totals')">
+                        <tr>
+                            <td t-foreach="section['totals']" t-as="cell" t-att-class="cell.get('class', '')">
+                                <span t-out="cell.get('value', '')"/>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </t>
+            <t t-else="">
+                <div class="ajc-no-data">Aucune ligne pour cette categorie.</div>
+            </t>
+        </div>
+    </template>
+
     <template id="report_aluminium_joinery_fabrication">
         <t t-call="web.html_container">
             <t t-foreach="docs" t-as="doc">
                 <t t-call="web.external_layout">
                     <div class="page">
-                        <h2>Fiche de fabrication - <span t-esc="doc.name"/></h2>
-                        <p t-if="doc.partner_id">Client : <span t-esc="doc.partner_id.display_name"/></p>
-                        <p>Date: <span t-esc="doc.date"/></p>
-                        <table class="table table-sm table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Ligne</th>
-                                    <th>Categorie</th>
-                                    <th>Reference</th>
-                                    <th>Designation</th>
-                                    <th>Quantite</th>
-                                    <th>Longueur (mm)</th>
-                                    <th>Largeur (mm)</th>
-                                    <th>Hauteur (mm)</th>
-                                    <th>Coupe</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr t-foreach="doc.result_line_ids" t-as="line">
-                                    <td><span t-esc="line.configuration_line_id.sequence"/></td>
-                                    <td><span t-esc="dict(line._fields['category'].selection).get(line.category)"/></td>
-                                    <td><span t-esc="line.ref_text"/></td>
-                                    <td><span t-esc="line.designation"/></td>
-                                    <td class="text-end"><span t-esc="line.qty"/></td>
-                                    <td class="text-end"><span t-esc="line.length_mm"/></td>
-                                    <td class="text-end"><span t-esc="line.width_mm"/></td>
-                                    <td class="text-end"><span t-esc="line.height_mm"/></td>
-                                    <td><span t-esc="line.cut_type"/></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <t t-call="aluminium_joinery_configurator.report_aluminium_joinery_styles"/>
+                        <t t-set="title" t-value="'Fiche de fabrication'"/>
+                        <t t-call="aluminium_joinery_configurator.report_aluminium_joinery_document_intro"/>
+                        <t t-set="report_groups" t-value="doc._get_report_groups('result')"/>
+                        <t t-if="not report_groups">
+                            <div class="alert alert-info">Aucun resultat calcule disponible pour cette configuration.</div>
+                        </t>
+                        <t t-foreach="report_groups" t-as="gamme_group">
+                            <div t-att-class="'ajc-gamme-block' + (' ajc-page-break' if gamme_group_index else '')">
+                                <div class="ajc-gamme-title">
+                                    GAMME : <span t-out="gamme_group['gamme_name']"/>
+                                </div>
+                                <t t-foreach="gamme_group['lines']" t-as="line_block">
+                                    <div class="ajc-line-card">
+                                        <div class="ajc-line-header">
+                                            <div class="ajc-line-title">
+                                                <span t-out="line_block['label']"/>
+                                            </div>
+                                            <table class="ajc-meta-table">
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="ajc-meta-label">Serie</td>
+                                                        <td class="ajc-meta-value"><span t-out="line_block['serie_name']"/></td>
+                                                        <td class="ajc-meta-label">Modele</td>
+                                                        <td class="ajc-meta-value"><span t-out="line_block['modele_name']"/></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="ajc-meta-label">Quantite</td>
+                                                        <td class="ajc-meta-value"><span t-out="line_block['qty']"/></td>
+                                                        <td class="ajc-meta-label">Dimensions</td>
+                                                        <td class="ajc-meta-value"><span t-out="line_block['width_mm']"/> x <span t-out="line_block['height_mm']"/> mm</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="ajc-line-body">
+                                            <t t-foreach="line_block['sections']" t-as="section">
+                                                <t t-call="aluminium_joinery_configurator.report_aluminium_joinery_section_table"/>
+                                            </t>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
                     </div>
                 </t>
             </t>
@@ -67,37 +267,50 @@
             <t t-foreach="docs" t-as="doc">
                 <t t-call="web.external_layout">
                     <div class="page">
-                        <h2>Synthese matiere - <span t-esc="doc.name"/></h2>
-                        <table class="table table-sm table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Categorie</th>
-                                    <th>Reference</th>
-                                    <th>Designation</th>
-                                    <th>Quantite totale</th>
-                                    <th>Longueur totale (mm)</th>
-                                    <th>Largeur (mm)</th>
-                                    <th>Hauteur (mm)</th>
-                                    <th>Barres necessaires</th>
-                                    <th>Prix unitaire</th>
-                                    <th>Montant total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr t-foreach="doc.summary_ids" t-as="line">
-                                    <td><span t-esc="dict(line._fields['category'].selection).get(line.category)"/></td>
-                                    <td><span t-esc="line.ref_text"/></td>
-                                    <td><span t-esc="line.designation"/></td>
-                                    <td class="text-end"><span t-esc="line.total_qty"/></td>
-                                    <td class="text-end"><span t-esc="line.total_length_mm"/></td>
-                                    <td class="text-end"><span t-esc="line.width_mm"/></td>
-                                    <td class="text-end"><span t-esc="line.height_mm"/></td>
-                                    <td class="text-end"><span t-esc="line.bars_required"/></td>
-                                    <td class="text-end"><span t-esc="line.unit_price"/></td>
-                                    <td class="text-end"><span t-esc="line.total_price"/></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <t t-call="aluminium_joinery_configurator.report_aluminium_joinery_styles"/>
+                        <t t-set="title" t-value="'Synthese matiere'"/>
+                        <t t-call="aluminium_joinery_configurator.report_aluminium_joinery_document_intro"/>
+                        <t t-set="report_groups" t-value="doc._get_report_groups('summary')"/>
+                        <t t-if="not report_groups">
+                            <div class="alert alert-info">Aucune synthese matiere disponible pour cette configuration.</div>
+                        </t>
+                        <t t-foreach="report_groups" t-as="gamme_group">
+                            <div t-att-class="'ajc-gamme-block' + (' ajc-page-break' if gamme_group_index else '')">
+                                <div class="ajc-gamme-title">
+                                    GAMME : <span t-out="gamme_group['gamme_name']"/>
+                                </div>
+                                <t t-foreach="gamme_group['lines']" t-as="line_block">
+                                    <div class="ajc-line-card">
+                                        <div class="ajc-line-header">
+                                            <div class="ajc-line-title">
+                                                <span t-out="line_block['label']"/>
+                                            </div>
+                                            <table class="ajc-meta-table">
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="ajc-meta-label">Serie</td>
+                                                        <td class="ajc-meta-value"><span t-out="line_block['serie_name']"/></td>
+                                                        <td class="ajc-meta-label">Modele</td>
+                                                        <td class="ajc-meta-value"><span t-out="line_block['modele_name']"/></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="ajc-meta-label">Quantite</td>
+                                                        <td class="ajc-meta-value"><span t-out="line_block['qty']"/></td>
+                                                        <td class="ajc-meta-label">Dimensions</td>
+                                                        <td class="ajc-meta-value"><span t-out="line_block['width_mm']"/> x <span t-out="line_block['height_mm']"/> mm</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="ajc-line-body">
+                                            <t t-foreach="line_block['sections']" t-as="section">
+                                                <t t-call="aluminium_joinery_configurator.report_aluminium_joinery_section_table"/>
+                                            </t>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
                     </div>
                 </t>
             </t>

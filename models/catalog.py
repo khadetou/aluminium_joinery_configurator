@@ -278,7 +278,7 @@ class AluminiumJoineryRule(models.Model):
             self.env["ir.model.data"].sudo().create(vals)
 
     @api.model
-    def _resolve_product_by_default_code(self, default_code, create_placeholder=False):
+    def _resolve_product_by_default_code(self, default_code, create_placeholder=False, template_vals=None):
         code = (default_code or "").strip()
         if not code:
             return self.env["product.product"]
@@ -290,9 +290,10 @@ class AluminiumJoineryRule(models.Model):
                 "name": code,
                 "default_code": code,
                 "type": "consu",
-                "sale_ok": False,
+                "sale_ok": True,
                 "purchase_ok": True,
                 "is_placeholder_product_tmpl": True,
+                **(template_vals or {}),
             }
         )
         self._ensure_import_xmlid(
@@ -315,7 +316,20 @@ class AluminiumJoineryRule(models.Model):
 
     def _ensure_product_link_from_reference(self):
         for rule in self.filtered(lambda rec: not rec.product_id and rec.product_default_code):
-            product = self._resolve_product_by_default_code(rule.product_default_code, create_placeholder=True)
+            template_vals = {
+                "joinery_item_type": {
+                    "profile": "profile",
+                    "joint": "joint",
+                    "accessoire": "accessory",
+                    "filling": "filling",
+                }.get(rule.category),
+                "joinery_bar_length_mm": 5800 if rule.category == "profile" else 0,
+            }
+            product = self._resolve_product_by_default_code(
+                rule.product_default_code,
+                create_placeholder=True,
+                template_vals=template_vals,
+            )
             if product:
                 rule.product_id = product.id
 
@@ -428,7 +442,7 @@ class AluminiumJoineryFillingRule(models.Model):
             self.env["ir.model.data"].sudo().create(vals)
 
     @api.model
-    def _resolve_product_by_default_code(self, default_code, create_placeholder=False):
+    def _resolve_product_by_default_code(self, default_code, create_placeholder=False, template_vals=None):
         code = (default_code or "").strip()
         if not code:
             return self.env["product.product"]
@@ -440,10 +454,11 @@ class AluminiumJoineryFillingRule(models.Model):
                 "name": code,
                 "default_code": code,
                 "type": "consu",
-                "sale_ok": False,
+                "sale_ok": True,
                 "purchase_ok": True,
                 "joinery_item_type": "filling",
                 "is_placeholder_product_tmpl": True,
+                **(template_vals or {}),
             }
         )
         self._ensure_import_xmlid(
@@ -465,8 +480,17 @@ class AluminiumJoineryFillingRule(models.Model):
         return prepared
 
     def _ensure_product_link_from_reference(self):
-        for rule in self.filtered(lambda rec: not rec.product_id and rec.product_default_code):
-            product = self._resolve_product_by_default_code(rule.product_default_code, create_placeholder=True)
+        for rule in self.filtered(lambda rec: not rec.product_id):
+            if not rule.product_default_code:
+                generated_code = f"FILL__{rule.rule_code.upper()}" if rule.rule_code else f"FILL__RULE__{rule.id}"
+                rule.product_default_code = generated_code
+            product = self._resolve_product_by_default_code(
+                rule.product_default_code,
+                create_placeholder=True,
+                template_vals={
+                    "joinery_item_type": "filling",
+                },
+            )
             if product:
                 rule.product_id = product.id
 

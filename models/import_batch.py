@@ -169,7 +169,9 @@ class AluminiumJoineryCatalogImport(models.Model):
                 "name": row.get("name") or row.get("default_code"),
                 "type": row.get("type") or "consu",
                 "uom_id": self._resolve_m2o_xmlid("uom.uom", row.get("uom_id/id")).id,
-                "uom_po_id": self._resolve_m2o_xmlid("uom.uom", row.get("uom_po_id/id")).id,
+                "categ_id": self._resolve_m2o_xmlid("product.category", row.get("categ_id/id")).id
+                if row.get("categ_id/id")
+                else False,
                 "sale_ok": self._to_bool(row.get("sale_ok"), default=True),
                 "purchase_ok": self._to_bool(row.get("purchase_ok"), default=True),
                 "joinery_item_type": row.get("joinery_item_type") or False,
