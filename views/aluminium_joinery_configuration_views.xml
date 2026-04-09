@@ -100,6 +100,9 @@
                                             <field name="designation"/>
                                             <field name="qty"/>
                                             <field name="length_mm"/>
+                                            <field name="bar_length_mm"/>
+                                            <field name="bars_required"/>
+                                            <field name="billed_length_mm"/>
                                             <field name="width_mm"/>
                                             <field name="height_mm"/>
                                             <field name="cut_type"/>
@@ -123,9 +126,11 @@
                                             <field name="designation"/>
                                             <field name="total_qty"/>
                                             <field name="total_length_mm"/>
+                                            <field name="bar_length_mm"/>
                                             <field name="width_mm"/>
                                             <field name="height_mm"/>
                                             <field name="bars_required"/>
+                                            <field name="billed_length_mm"/>
                                             <field name="unit_price"/>
                                             <field name="total_price"/>
                                         </list>

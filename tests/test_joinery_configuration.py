@@ -357,7 +357,8 @@ class TestJoineryConfiguration(TransactionCase):
         self.assertEqual(result_groups[0]["gamme_name"], fixed_line.gamme_id.display_name)
         self.assertEqual(result_groups[1]["gamme_name"], sliding_line.gamme_id.display_name)
         self.assertTrue(any(section["title"] == "PROFILES" for section in result_groups[0]["lines"][0]["sections"]))
-        self.assertIn("Qte", result_groups[0]["lines"][0]["sections"][0]["headers"])
+        self.assertIn("Longueur requise (mm)", result_groups[0]["lines"][0]["sections"][0]["headers"])
+        self.assertIn("Barres", result_groups[0]["lines"][0]["sections"][0]["headers"])
         self.assertIn("Section / Coupe", result_groups[0]["lines"][0]["sections"][0]["headers"])
 
         summary_groups = configuration._get_report_groups("summary")
@@ -404,7 +405,12 @@ class TestJoineryConfiguration(TransactionCase):
         )[:1]
         self.assertTrue(profile_line)
         self.assertEqual(profile_line.product_uom_id, self.env.ref("uom.product_uom_meter"))
-        self.assertAlmostEqual(profile_line.product_uom_qty, profile_line.joinery_summary_id.total_length_mm / 1000.0)
+        self.assertGreater(profile_line.joinery_summary_id.bars_required, 0)
+        self.assertGreaterEqual(
+            profile_line.joinery_summary_id.billed_length_mm,
+            profile_line.joinery_summary_id.total_length_mm,
+        )
+        self.assertAlmostEqual(profile_line.product_uom_qty, profile_line.joinery_summary_id.billed_length_mm / 1000.0)
 
         joint_line = order.order_line.filtered(
             lambda line: line.joinery_summary_id and line.joinery_summary_id.category == "joint" and not line.display_type
@@ -424,6 +430,34 @@ class TestJoineryConfiguration(TransactionCase):
                 lambda line: line.display_type == "line_note" and line.joinery_summary_id and line.joinery_summary_id.category == "filling"
             )
         )
+
+    def test_profile_sale_quantity_uses_standard_bar_billed_length(self):
+        product_tmpl = self.env["product.template"].create(
+            {
+                "name": "Profile test palette",
+                "default_code": "PTEST-5800",
+                "joinery_item_type": "profile",
+                "joinery_bar_length_mm": 5800,
+                "list_price": 1000.0,
+            }
+        )
+        summary = self.env["aluminium.joinery.material.summary"].create(
+            {
+                "configuration_id": self.env["aluminium.joinery.configuration"].create({}).id,
+                "category": "profile",
+                "product_id": product_tmpl.product_variant_id.id,
+                "ref_text": "PTEST-5800",
+                "designation": "Profile test palette",
+                "total_qty": 1.0,
+                "total_length_mm": 12000.0,
+                "bar_length_mm": 5800.0,
+                "bars_required": 3,
+                "billed_length_mm": 17400.0,
+                "unit_price": 1000.0,
+                "total_price": 17400.0,
+            }
+        )
+        self.assertAlmostEqual(summary.get_sale_quantity(), 17.4)
 
     def test_calculation_still_works_after_linking_placeholder_product(self):
         rows = self.generator.build_rows()

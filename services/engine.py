@@ -82,6 +82,7 @@ class JoineryEngine:
                 "configuration_line_id": False,
                 "total_qty": 0.0,
                 "total_length_mm": 0.0,
+                "billed_length_mm": 0.0,
                 "width_mm": 0.0,
                 "height_mm": 0.0,
                 "designation": False,
@@ -110,6 +111,7 @@ class JoineryEngine:
             data["category"] = result.category
             data["total_qty"] += result.qty or 0.0
             data["total_length_mm"] += result.length_mm or 0.0
+            data["billed_length_mm"] += result.billed_length_mm or 0.0
             data["width_mm"] = max(data["width_mm"], result.width_mm or 0.0)
             data["height_mm"] = max(data["height_mm"], result.height_mm or 0.0)
             data["bar_length_mm"] = result.bar_length_mm or data["bar_length_mm"]
@@ -119,7 +121,22 @@ class JoineryEngine:
         for data in grouped.values():
             bar_length = data["bar_length_mm"] or 0.0
             bars_required = math.ceil(data["total_length_mm"] / bar_length) if bar_length and data["total_length_mm"] else 0
-            pricing_qty = bars_required or data["total_qty"] or 0.0
+            billed_length_mm = (
+                (bars_required * bar_length)
+                if data["category"] == "profile" and bar_length and bars_required
+                else data["billed_length_mm"]
+            )
+            product = self.env["product.product"].browse(data["product_id"]) if data["product_id"] else self.env["product.product"]
+            pricing_qty = self._get_pricing_quantity(
+                category=data["category"],
+                product=product,
+                total_qty=data["total_qty"],
+                total_length_mm=data["total_length_mm"],
+                billed_length_mm=billed_length_mm,
+                bars_required=bars_required,
+                width_mm=data["width_mm"],
+                height_mm=data["height_mm"],
+            )
             summary_vals.append(
                 {
                     "configuration_id": configuration.id,
@@ -131,6 +148,7 @@ class JoineryEngine:
                     "designation": data["designation"],
                     "total_qty": data["total_qty"],
                     "total_length_mm": data["total_length_mm"],
+                    "billed_length_mm": billed_length_mm,
                     "bar_length_mm": bar_length,
                     "bars_required": bars_required,
                     "width_mm": data["width_mm"],
@@ -180,10 +198,23 @@ class JoineryEngine:
             }
         value = self._apply_rounding(self._compute_rule_value(rule, variables), rule.rounding_mode)
         if rule.category in ("profile", "joint"):
+            standard_length_mm = common["bar_length_mm"] if rule.category == "profile" else 0.0
+            bars_required = (
+                math.ceil(value / standard_length_mm)
+                if rule.category == "profile" and standard_length_mm and value
+                else 0
+            )
+            billed_length_mm = (
+                bars_required * standard_length_mm
+                if rule.category == "profile" and standard_length_mm and bars_required
+                else value
+            )
             return {
                 **common,
                 "qty": 1.0,
                 "length_mm": value,
+                "billed_length_mm": billed_length_mm,
+                "bars_required": bars_required,
             }
         return {
             **common,
@@ -356,6 +387,32 @@ class JoineryEngine:
             or template.ajc_bar_length_mm
             or line.gamme_id.default_bar_length_mm
         )
+
+    def _get_pricing_quantity(
+        self,
+        *,
+        category,
+        product,
+        total_qty,
+        total_length_mm,
+        billed_length_mm,
+        bars_required,
+        width_mm,
+        height_mm,
+    ):
+        meter_uom = self.env.ref("uom.product_uom_meter")
+        sqm_uom = self.env.ref("uom.product_uom_square_meter")
+        if category == "profile":
+            if product and product.uom_id == meter_uom:
+                return (billed_length_mm or total_length_mm or 0.0) / 1000.0
+            return bars_required or total_qty or 0.0
+        if category == "joint":
+            if product and product.uom_id == meter_uom:
+                return (total_length_mm or 0.0) / 1000.0
+            return total_qty or 0.0
+        if category == "filling" and product and product.uom_id == sqm_uom:
+            return ((total_qty or 0.0) * (width_mm or 0.0) * (height_mm or 0.0)) / 1000000.0
+        return total_qty or 0.0
 
     def _get_variables(self, line):
         return {

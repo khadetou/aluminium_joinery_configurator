@@ -130,6 +130,26 @@ class ProductTemplate(models.Model):
         string="Mode de fabrication menuiserie",
         default="standard",
     )
+    standard_length_mm = fields.Float(
+        string="Longueur standard (mm)",
+        compute="_compute_standard_length_mm",
+        inverse="_inverse_standard_length_mm",
+        help="Longueur palette / barre standard utilisee pour les profils achetes et vendus en longueurs standards.",
+    )
+
+    @api.depends("joinery_bar_length_mm", "schuller_bar_length_mm", "ajc_bar_length_mm")
+    def _compute_standard_length_mm(self):
+        for rec in self:
+            rec.standard_length_mm = (
+                rec.joinery_bar_length_mm
+                or rec.schuller_bar_length_mm
+                or rec.ajc_bar_length_mm
+                or 0.0
+            )
+
+    def _inverse_standard_length_mm(self):
+        for rec in self:
+            rec.joinery_bar_length_mm = rec.standard_length_mm or 0.0
 
     @api.model_create_multi
     def create(self, vals_list):

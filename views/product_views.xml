@@ -15,7 +15,8 @@
                         <field name="manufacturing_mode"/>
                     </group>
                     <group>
-                        <field name="joinery_bar_length_mm"/>
+                        <field name="standard_length_mm"/>
+                        <field name="joinery_bar_length_mm" groups="base.group_no_one"/>
                         <field name="ajc_default_cut_type" groups="base.group_no_one"/>
                         <field name="ajc_is_configurator_item" groups="base.group_no_one"/>
                         <field name="ajc_item_type" groups="base.group_no_one"/>

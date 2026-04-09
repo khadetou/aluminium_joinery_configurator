@@ -573,8 +573,10 @@ class AluminiumJoineryConfigurationLine(models.Model):
                     [
                         record.ref_text or "",
                         record.designation or "",
-                        self._format_display_number(record.qty),
                         self._format_display_number(record.length_mm),
+                        self._format_display_number(record.bar_length_mm),
+                        self._format_display_number(record.bars_required),
+                        self._format_display_number(record.billed_length_mm),
                         record.cut_type or "-",
                     ]
                     for record in source.filtered(lambda rec: rec.category == "profile")
@@ -607,7 +609,7 @@ class AluminiumJoineryConfigurationLine(models.Model):
                 ],
             }
             return [
-                ("Profiles", ["Reference", "Designation", "Qte", "Longueur (mm)", "Section / Coupe"], data_by_category["profile"]),
+                ("Profiles", ["Reference", "Designation", "Longueur requise (mm)", "Longueur standard (mm)", "Barres", "Longueur facturable (mm)", "Section / Coupe"], data_by_category["profile"]),
                 ("Accessoires / Quincailleries", ["Reference", "Designation", "Qte"], data_by_category["accessoire"]),
                 ("Joints", ["Reference", "Designation", "Longueur (mm)"], data_by_category["joint"]),
                 ("Remplissage / Vitrages et panneaux", ["Reference", "Designation", "Largeur (mm)", "Hauteur (mm)", "Qte"], data_by_category["filling"]),
@@ -627,6 +629,8 @@ class AluminiumJoineryConfigurationLine(models.Model):
                     "pieces": 0.0,
                     "unit_length_mm": 0.0,
                     "total_length_mm": 0.0,
+                    "bar_length_mm": 0.0,
+                    "billed_length_mm": 0.0,
                     "cut_type": "-",
                     "bars_required": 0,
                     "nature": "",
@@ -651,6 +655,8 @@ class AluminiumJoineryConfigurationLine(models.Model):
                 row["pieces"] += record.qty or 1.0
                 row["unit_length_mm"] = record.length_mm or 0.0
                 row["total_length_mm"] += (record.length_mm or 0.0) * (record.qty or 1.0)
+                row["bar_length_mm"] = max(row["bar_length_mm"], record.bar_length_mm or 0.0)
+                row["billed_length_mm"] += record.billed_length_mm or 0.0
                 row["cut_type"] = record.cut_type or "-"
                 row["nature"] = meta["nature"]
                 row["action"] = meta["action"]
@@ -664,8 +670,10 @@ class AluminiumJoineryConfigurationLine(models.Model):
                     self._format_display_number(row["pieces"]),
                     self._format_display_number(row["unit_length_mm"]),
                     self._format_display_number(row["total_length_mm"]),
+                    self._format_display_number(row["bar_length_mm"]),
                     row["cut_type"],
                     self._format_display_number(row["bars_required"]) if row["bars_required"] else "-",
+                    self._format_display_number(row["billed_length_mm"]),
                     row["nature"],
                     row["action"],
                     row["bom_code"],
@@ -822,7 +830,7 @@ class AluminiumJoineryConfigurationLine(models.Model):
             return [
                 (
                     "Pieces / Profiles a couper",
-                    ["Reference", "Designation", "Pieces", "Long. unit. (mm)", "Long. totale (mm)", "Section / Coupe", "Barres", "Nature", "Action", "Nomenclature"],
+                    ["Reference", "Designation", "Pieces", "Long. req. unit. (mm)", "Long. req. totale (mm)", "Long. standard (mm)", "Section / Coupe", "Barres", "Long. facturable (mm)", "Nature", "Action", "Nomenclature"],
                     profile_rows,
                 ),
                 (
@@ -985,8 +993,10 @@ class AluminiumJoineryConfigurationLine(models.Model):
                 self._make_report_row(
                     (record.ref_text, ""),
                     (record.designation, ""),
-                    (self._format_display_number(record.qty), "text-end"),
                     (self._format_display_number(record.length_mm), "text-end"),
+                    (self._format_display_number(record.bar_length_mm), "text-end"),
+                    (self._format_display_number(record.bars_required), "text-end"),
+                    (self._format_display_number(record.billed_length_mm), "text-end"),
                     (record.cut_type or "-", ""),
                 )
                 for record in source.filtered(lambda rec: rec.category == "profile")
@@ -1020,13 +1030,15 @@ class AluminiumJoineryConfigurationLine(models.Model):
             return [
                 {
                     "title": "PROFILES",
-                    "headers": ["Reference", "Designation", "Qte", "Longueur (mm)", "Section / Coupe"],
+                    "headers": ["Reference", "Designation", "Longueur requise (mm)", "Longueur standard (mm)", "Barres", "Longueur facturable (mm)", "Section / Coupe"],
                     "rows": profile_rows,
                     "totals": self._make_report_row(
                         ("", ""),
                         ("Total profiles", "fw-bold"),
-                        (self._format_display_number(sum((rec.qty or 0.0) for rec in source.filtered(lambda rec: rec.category == "profile"))), "text-end fw-bold"),
                         (self._format_display_number(sum((rec.length_mm or 0.0) for rec in source.filtered(lambda rec: rec.category == "profile"))), "text-end fw-bold"),
+                        ("", ""),
+                        (self._format_display_number(sum((rec.bars_required or 0.0) for rec in source.filtered(lambda rec: rec.category == "profile"))), "text-end fw-bold"),
+                        (self._format_display_number(sum((rec.billed_length_mm or 0.0) for rec in source.filtered(lambda rec: rec.category == "profile"))), "text-end fw-bold"),
                         ("", ""),
                     ) if profile_rows else [],
                 },
@@ -1061,9 +1073,10 @@ class AluminiumJoineryConfigurationLine(models.Model):
             self._make_report_row(
                 (record.ref_text, ""),
                 (record.designation, ""),
-                (self._format_display_number(record.total_qty), "text-end"),
                 (self._format_display_number(record.total_length_mm / 1000.0), "text-end"),
+                (self._format_display_number(record.bar_length_mm), "text-end"),
                 (self._format_display_number(record.bars_required), "text-end"),
+                (self._format_display_number(record.billed_length_mm / 1000.0), "text-end"),
             )
             for record in source.filtered(lambda rec: rec.category == "profile")
         ]
@@ -1096,14 +1109,15 @@ class AluminiumJoineryConfigurationLine(models.Model):
         return [
             {
                 "title": "PROFILES",
-                "headers": ["Reference", "Designation", "Qte", "Longueur totale (m)", "Barres necessaires"],
+                "headers": ["Reference", "Designation", "Longueur requise (m)", "Longueur standard (mm)", "Barres necessaires", "Longueur facturable (m)"],
                 "rows": profile_rows,
                 "totals": self._make_report_row(
                     ("", ""),
                     ("Total profiles", "fw-bold"),
-                    (self._format_display_number(sum((rec.total_qty or 0.0) for rec in source.filtered(lambda rec: rec.category == "profile"))), "text-end fw-bold"),
                     (self._format_display_number(sum((rec.total_length_mm or 0.0) for rec in source.filtered(lambda rec: rec.category == "profile")) / 1000.0), "text-end fw-bold"),
+                    ("", ""),
                     (self._format_display_number(sum((rec.bars_required or 0.0) for rec in source.filtered(lambda rec: rec.category == "profile"))), "text-end fw-bold"),
+                    (self._format_display_number(sum((rec.billed_length_mm or 0.0) for rec in source.filtered(lambda rec: rec.category == "profile")) / 1000.0), "text-end fw-bold"),
                 ) if profile_rows else [],
             },
             {
@@ -1167,10 +1181,12 @@ class AluminiumJoineryResultLine(models.Model):
     designation = fields.Char(string="Designation")
     qty = fields.Float(string="Quantite", default=0.0)
     length_mm = fields.Float(string="Longueur (mm)")
+    billed_length_mm = fields.Float(string="Longueur facturable (mm)")
     width_mm = fields.Float(string="Largeur (mm)")
     height_mm = fields.Float(string="Hauteur (mm)")
     cut_type = fields.Char(string="Type de coupe")
     bar_length_mm = fields.Float(string="Longueur barre (mm)")
+    bars_required = fields.Integer(string="Barres necessaires")
     unit_price = fields.Float(string="Prix unitaire")
     computed_json = fields.Json(string="Valeurs calculees")
 
@@ -1181,7 +1197,11 @@ class AluminiumJoineryResultLine(models.Model):
     def get_manufacturing_quantity(self):
         self.ensure_one()
         if self.product_id:
-            if self.category in ("profile", "joint") and self.product_id.uom_id == self.env.ref("uom.product_uom_meter"):
+            if self.category == "profile":
+                if self.product_id.uom_id == self.env.ref("uom.product_uom_meter"):
+                    return (self.length_mm or 0.0) / 1000.0
+                return self.qty or 0.0
+            if self.category == "joint" and self.product_id.uom_id == self.env.ref("uom.product_uom_meter"):
                 return (self.length_mm or 0.0) / 1000.0
             if self.category == "filling" and self.product_id.uom_id == self.env.ref("uom.product_uom_square_meter"):
                 return self._compute_surface_m2()
@@ -1215,6 +1235,7 @@ class AluminiumJoineryMaterialSummary(models.Model):
     designation = fields.Char(string="Designation")
     total_qty = fields.Float(string="Quantite totale")
     total_length_mm = fields.Float(string="Longueur totale (mm)")
+    billed_length_mm = fields.Float(string="Longueur facturable (mm)")
     bar_length_mm = fields.Float(string="Longueur barre (mm)")
     bars_required = fields.Integer(string="Barres necessaires")
     width_mm = fields.Float(string="Largeur (mm)")
@@ -1231,7 +1252,7 @@ class AluminiumJoineryMaterialSummary(models.Model):
         self.ensure_one()
         if self.category == "profile":
             if self.product_id and self.product_id.uom_id == self.env.ref("uom.product_uom_meter"):
-                return self.total_length_mm / 1000.0
+                return (self.billed_length_mm or self.total_length_mm) / 1000.0
             return self.bars_required or self.total_qty
         if self.category == "joint":
             if self.product_id and self.product_id.uom_id == self.env.ref("uom.product_uom_meter"):

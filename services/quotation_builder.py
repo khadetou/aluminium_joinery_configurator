@@ -18,6 +18,19 @@ class QuotationBuilder:
     def __init__(self, env):
         self.env = env
 
+    def _build_sale_line_description(self, summary):
+        description = summary.designation or summary.product_id.display_name
+        if summary.category == "profile" and summary.bar_length_mm:
+            required_m = (summary.total_length_mm or 0.0) / 1000.0
+            standard_m = (summary.bar_length_mm or 0.0) / 1000.0
+            billed_m = (summary.billed_length_mm or 0.0) / 1000.0
+            description = (
+                f"{description}\n"
+                f"Besoin: {required_m:g} m | Palette: {standard_m:g} m | "
+                f"Barres: {summary.bars_required:g} | Facturable: {billed_m:g} m"
+            )
+        return description
+
     def build_for_configuration(self, configuration):
         if not configuration.summary_ids:
             raise UserError("Calculez la configuration avant de generer un devis.")
@@ -56,7 +69,7 @@ class QuotationBuilder:
                             "product_id": summary.product_id.id,
                             "product_uom_id": summary.product_id.uom_id.id,
                             "product_uom_qty": qty,
-                            "name": summary.designation or summary.product_id.display_name,
+                            "name": self._build_sale_line_description(summary),
                             "joinery_configuration_id": configuration.id,
                             "joinery_summary_id": summary.id,
                         }
