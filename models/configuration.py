@@ -1,4 +1,5 @@
 import hashlib
+import re
 from collections import defaultdict
 from markupsafe import Markup, escape
 
@@ -9,6 +10,7 @@ from ..services.engine import JoineryEngine
 from ..services.manufacturing_builder import ManufacturingBuilder
 from ..services.project_builder import ProjectBuilder
 from ..services.quotation_builder import QuotationBuilder
+from ..services.detailed_result_xlsx import DetailedResultXlsxBuilder
 
 
 class AluminiumJoineryConfiguration(models.Model):
@@ -151,6 +153,16 @@ class AluminiumJoineryConfiguration(models.Model):
             "res_id": self.project_project_id.id,
         }
 
+    def action_export_detailed_results_xlsx(self):
+        self.ensure_one()
+        if not self.result_line_ids:
+            raise ValidationError(_("Calculez d'abord la configuration pour exporter le resultat detaille."))
+        return {
+            "type": "ir.actions.act_url",
+            "url": self.get_detailed_results_xlsx_url(),
+            "target": "self",
+        }
+
     def get_portal_url(self):
         self.ensure_one()
         return f"/my/configurateur/{self.id}"
@@ -159,9 +171,36 @@ class AluminiumJoineryConfiguration(models.Model):
         self.ensure_one()
         return f"/my/configurateur/{self.id}/resultats"
 
+    def get_detailed_results_xlsx_url(self):
+        self.ensure_one()
+        return f"/aluminium_joinery/export/detailed-results/{self.id}.xlsx"
+
     def get_portal_material_summary_pdf_url(self):
         self.ensure_one()
         return f"/my/configurateur/{self.id}/synthese-matiere/pdf"
+
+    def _get_detailed_result_export_filename(self):
+        self.ensure_one()
+        token = re.sub(r"[^A-Za-z0-9_-]+", "-", (self.name or str(self.id)).replace("/", "-")).strip("-") or str(self.id)
+        return f"resultat_detaille_{token}.xlsx"
+
+    def _get_detailed_result_export_payload(self):
+        self.ensure_one()
+        return {
+            "configuration_name": self.name or "",
+            "project_name": self.project_name or "",
+            "partner_name": self.partner_id.display_name or "",
+            "date": fields.Date.to_string(self.date) if self.date else "",
+            "state_label": dict(self._fields["state"].selection).get(self.state, self.state or ""),
+            "line_count": len(self.line_ids),
+            "groups": self._get_report_groups("result"),
+        }
+
+    def _build_detailed_result_xlsx(self):
+        self.ensure_one()
+        if not self.result_line_ids:
+            raise ValidationError(_("Aucun resultat detaille n'est disponible pour cette configuration."))
+        return DetailedResultXlsxBuilder(self._get_detailed_result_export_payload()).build()
 
     def _get_portal_form_values(self):
         self.ensure_one()
@@ -417,6 +456,202 @@ class AluminiumJoineryConfiguration(models.Model):
                 }
             )
         return groups
+
+    def _get_grouped_result_payload(self):
+        self.ensure_one()
+        grouped = {
+            "profiles": {},
+            "accessories": {},
+            "joints": {},
+            "fillings": {},
+        }
+        for summary in self.summary_ids.sorted(lambda rec: (rec.category, rec.ref_text or "", rec.id)):
+            if summary.category == "profile":
+                key = (
+                    summary.product_id.id or 0,
+                    summary.ref_text or "",
+                    summary.designation or "",
+                    summary.bar_length_mm or 0.0,
+                )
+                row = grouped["profiles"].setdefault(
+                    key,
+                    {
+                        "ref_text": summary.ref_text or "",
+                        "designation": summary.designation or "",
+                        "required_length_mm": 0.0,
+                        "standard_length_mm": summary.bar_length_mm or 0.0,
+                        "bars_required": 0,
+                        "billed_length_mm": 0.0,
+                    },
+                )
+                row["required_length_mm"] += summary.total_length_mm or 0.0
+                row["bars_required"] += summary.bars_required or 0
+                row["billed_length_mm"] += summary.billed_length_mm or 0.0
+                continue
+            if summary.category == "accessoire":
+                key = (
+                    summary.product_id.id or 0,
+                    summary.ref_text or "",
+                    summary.designation or "",
+                )
+                row = grouped["accessories"].setdefault(
+                    key,
+                    {
+                        "ref_text": summary.ref_text or "",
+                        "designation": summary.designation or "",
+                        "total_qty": 0.0,
+                    },
+                )
+                row["total_qty"] += summary.total_qty or 0.0
+                continue
+            if summary.category == "joint":
+                key = (
+                    summary.product_id.id or 0,
+                    summary.ref_text or "",
+                    summary.designation or "",
+                )
+                row = grouped["joints"].setdefault(
+                    key,
+                    {
+                        "ref_text": summary.ref_text or "",
+                        "designation": summary.designation or "",
+                        "total_length_mm": 0.0,
+                    },
+                )
+                row["total_length_mm"] += summary.total_length_mm or 0.0
+                continue
+            if summary.category == "filling":
+                key = (
+                    summary.product_id.id or 0,
+                    summary.ref_text or "",
+                    summary.designation or "",
+                    summary.width_mm or 0.0,
+                    summary.height_mm or 0.0,
+                )
+                row = grouped["fillings"].setdefault(
+                    key,
+                    {
+                        "ref_text": summary.ref_text or "",
+                        "designation": summary.designation or "",
+                        "width_mm": summary.width_mm or 0.0,
+                        "height_mm": summary.height_mm or 0.0,
+                        "total_qty": 0.0,
+                    },
+                )
+                row["total_qty"] += summary.total_qty or 0.0
+        return {
+            "profiles": sorted(grouped["profiles"].values(), key=lambda item: (item["ref_text"], item["designation"])),
+            "accessories": sorted(grouped["accessories"].values(), key=lambda item: (item["ref_text"], item["designation"])),
+            "joints": sorted(grouped["joints"].values(), key=lambda item: (item["ref_text"], item["designation"])),
+            "fillings": sorted(
+                grouped["fillings"].values(),
+                key=lambda item: (item["ref_text"], item["designation"], item["width_mm"], item["height_mm"]),
+            ),
+        }
+
+    def _format_grouped_display_number(self, number):
+        try:
+            number = float(number or 0.0)
+        except (TypeError, ValueError):
+            return str(number or "")
+        if abs(number - round(number)) < 1e-9:
+            return str(int(round(number)))
+        return f"{number:.2f}".rstrip("0").rstrip(".")
+
+    def _make_grouped_report_row(self, *cells):
+        return [{"value": value or "", "class": css_class} for value, css_class in cells]
+
+    def _get_grouped_result_sections(self):
+        self.ensure_one()
+        payload = self._get_grouped_result_payload()
+        profile_rows = [
+            self._make_grouped_report_row(
+                (row["ref_text"], ""),
+                (row["designation"], ""),
+                (self._format_grouped_display_number(row["required_length_mm"]), "text-end"),
+                (self._format_grouped_display_number(row["standard_length_mm"]), "text-end"),
+                (self._format_grouped_display_number(row["bars_required"]), "text-end"),
+                (self._format_grouped_display_number(row["billed_length_mm"]), "text-end"),
+            )
+            for row in payload["profiles"]
+        ]
+        accessory_rows = [
+            self._make_grouped_report_row(
+                (row["ref_text"], ""),
+                (row["designation"], ""),
+                (self._format_grouped_display_number(row["total_qty"]), "text-end"),
+            )
+            for row in payload["accessories"]
+        ]
+        joint_rows = [
+            self._make_grouped_report_row(
+                (row["ref_text"], ""),
+                (row["designation"], ""),
+                (self._format_grouped_display_number(row["total_length_mm"]), "text-end"),
+            )
+            for row in payload["joints"]
+        ]
+        filling_rows = [
+            self._make_grouped_report_row(
+                (row["ref_text"], ""),
+                (row["designation"], ""),
+                (self._format_grouped_display_number(row["width_mm"]), "text-end"),
+                (self._format_grouped_display_number(row["height_mm"]), "text-end"),
+                (self._format_grouped_display_number(row["total_qty"]), "text-end"),
+            )
+            for row in payload["fillings"]
+        ]
+        return [
+            {
+                "title": "PROFILES",
+                "headers": ["Reference", "Designation", "Longueur requise (mm)", "Longueur standard (mm)", "Barres", "Longueur facturable (mm)"],
+                "mobile_headers": ["Ref.", "Designation", "Req. (mm)", "Std (mm)", "Barres", "Fact. (mm)"],
+                "rows": profile_rows,
+                "totals": self._make_grouped_report_row(
+                    ("", ""),
+                    ("Total profiles", "fw-bold"),
+                    (self._format_grouped_display_number(sum(row["required_length_mm"] for row in payload["profiles"])), "text-end fw-bold"),
+                    ("", ""),
+                    (self._format_grouped_display_number(sum(row["bars_required"] for row in payload["profiles"])), "text-end fw-bold"),
+                    (self._format_grouped_display_number(sum(row["billed_length_mm"] for row in payload["profiles"])), "text-end fw-bold"),
+                ) if profile_rows else [],
+            },
+            {
+                "title": "ACCESSOIRES",
+                "headers": ["Reference", "Designation", "Qte totale"],
+                "mobile_headers": ["Ref.", "Designation", "Qte"],
+                "rows": accessory_rows,
+                "totals": self._make_grouped_report_row(
+                    ("", ""),
+                    ("Total accessoires", "fw-bold"),
+                    (self._format_grouped_display_number(sum(row["total_qty"] for row in payload["accessories"])), "text-end fw-bold"),
+                ) if accessory_rows else [],
+            },
+            {
+                "title": "JOINTS",
+                "headers": ["Reference", "Designation", "Longueur totale (mm)"],
+                "mobile_headers": ["Ref.", "Designation", "Long. (mm)"],
+                "rows": joint_rows,
+                "totals": self._make_grouped_report_row(
+                    ("", ""),
+                    ("Total joints", "fw-bold"),
+                    (self._format_grouped_display_number(sum(row["total_length_mm"] for row in payload["joints"])), "text-end fw-bold"),
+                ) if joint_rows else [],
+            },
+            {
+                "title": "REMPLISSAGES",
+                "headers": ["Reference", "Designation", "Largeur (mm)", "Hauteur (mm)", "Qte totale"],
+                "mobile_headers": ["Ref.", "Designation", "Larg. (mm)", "Haut. (mm)", "Qte"],
+                "rows": filling_rows,
+                "totals": self._make_grouped_report_row(
+                    ("", ""),
+                    ("Total remplissages", "fw-bold"),
+                    ("", ""),
+                    ("", ""),
+                    (self._format_grouped_display_number(sum(row["total_qty"] for row in payload["fillings"])), "text-end fw-bold"),
+                ) if filling_rows else [],
+            },
+        ]
 
 
 class AluminiumJoineryConfigurationLine(models.Model):
@@ -1031,6 +1266,7 @@ class AluminiumJoineryConfigurationLine(models.Model):
                 {
                     "title": "PROFILES",
                     "headers": ["Reference", "Designation", "Longueur requise (mm)", "Longueur standard (mm)", "Barres", "Longueur facturable (mm)", "Section / Coupe"],
+                    "mobile_headers": ["Ref.", "Designation", "Req. (mm)", "Std (mm)", "Barres", "Fact. (mm)", "Coupe"],
                     "rows": profile_rows,
                     "totals": self._make_report_row(
                         ("", ""),
@@ -1045,18 +1281,21 @@ class AluminiumJoineryConfigurationLine(models.Model):
                 {
                     "title": "ACCESSOIRES",
                     "headers": ["Reference", "Designation", "Qte"],
+                    "mobile_headers": ["Ref.", "Designation", "Qte"],
                     "rows": accessory_rows,
                     "totals": self._make_report_row(("", ""), ("Total accessoires", "fw-bold"), (self._format_display_number(sum((rec.qty or 0.0) for rec in source.filtered(lambda rec: rec.category == "accessoire"))), "text-end fw-bold")) if accessory_rows else [],
                 },
                 {
                     "title": "JOINTS",
                     "headers": ["Reference", "Designation", "Longueur (mm)"],
+                    "mobile_headers": ["Ref.", "Designation", "Long. (mm)"],
                     "rows": joint_rows,
                     "totals": self._make_report_row(("", ""), ("Total joints", "fw-bold"), (self._format_display_number(sum((rec.length_mm or 0.0) for rec in source.filtered(lambda rec: rec.category == "joint"))), "text-end fw-bold")) if joint_rows else [],
                 },
                 {
                     "title": "REMPLISSAGES",
                     "headers": ["Reference", "Designation", "Largeur (mm)", "Hauteur (mm)", "Qte"],
+                    "mobile_headers": ["Ref.", "Designation", "Larg. (mm)", "Haut. (mm)", "Qte"],
                     "rows": filling_rows,
                     "totals": self._make_report_row(
                         ("", ""),
@@ -1110,6 +1349,7 @@ class AluminiumJoineryConfigurationLine(models.Model):
             {
                 "title": "PROFILES",
                 "headers": ["Reference", "Designation", "Longueur requise (m)", "Longueur standard (mm)", "Barres necessaires", "Longueur facturable (m)"],
+                "mobile_headers": ["Ref.", "Designation", "Req. (m)", "Std (mm)", "Barres", "Fact. (m)"],
                 "rows": profile_rows,
                 "totals": self._make_report_row(
                     ("", ""),
@@ -1123,6 +1363,7 @@ class AluminiumJoineryConfigurationLine(models.Model):
             {
                 "title": "ACCESSOIRES",
                 "headers": ["Reference", "Designation", "Qte"],
+                "mobile_headers": ["Ref.", "Designation", "Qte"],
                 "rows": accessory_rows,
                 "totals": self._make_report_row(
                     ("", ""),
@@ -1133,6 +1374,7 @@ class AluminiumJoineryConfigurationLine(models.Model):
             {
                 "title": "JOINTS",
                 "headers": ["Reference", "Designation", "Longueur totale (m)"],
+                "mobile_headers": ["Ref.", "Designation", "Long. (m)"],
                 "rows": joint_rows,
                 "totals": self._make_report_row(
                     ("", ""),
@@ -1143,6 +1385,7 @@ class AluminiumJoineryConfigurationLine(models.Model):
             {
                 "title": "REMPLISSAGES",
                 "headers": ["Reference", "Designation", "Largeur (mm)", "Hauteur (mm)", "Qte"],
+                "mobile_headers": ["Ref.", "Designation", "Larg. (mm)", "Haut. (mm)", "Qte"],
                 "rows": filling_rows,
                 "totals": self._make_report_row(
                     ("", ""),

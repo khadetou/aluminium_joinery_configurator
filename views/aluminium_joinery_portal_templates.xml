@@ -8,7 +8,7 @@
                 <t t-set="url" t-value="'/my/configurateur'"/>
                 <t t-set="text">Configurez vos menuiseries, lancez le calcul et preparez votre devis.</t>
                 <t t-set="placeholder_count" t-value="'joinery_configuration_count'"/>
-                <t t-set="show_count" t-value="True"/>
+                <t t-set="config_card" t-value="True"/>
             </t>
             <t t-call="portal.portal_docs_entry">
                 <t t-set="icon" t-value="'/sale/static/src/img/bag.svg'"/>
@@ -16,7 +16,7 @@
                 <t t-set="url" t-value="'/my/joinery/quotes'"/>
                 <t t-set="text">Retrouvez les devis generes depuis le configurateur et telechargez-les.</t>
                 <t t-set="placeholder_count" t-value="'joinery_quote_count'"/>
-                <t t-set="show_count" t-value="True"/>
+                <t t-set="config_card" t-value="True"/>
             </t>
         </xpath>
     </template>
@@ -162,13 +162,23 @@
                                                 <t t-foreach="section['rows']" t-as="row">
                                                     <tr>
                                                         <t t-foreach="row" t-as="cell">
-                                                            <td t-att-class="cell.get('class')" t-out="cell['value']"/>
+                                                            <td
+                                                                t-att-class="cell.get('class')"
+                                                                t-att-data-label="(section.get('mobile_headers') or section['headers'])[cell_index] if cell_index &lt; len(section.get('mobile_headers') or section['headers']) else ''"
+                                                            >
+                                                                <span class="o_ajc_cell_value" t-out="cell['value']"/>
+                                                            </td>
                                                         </t>
                                                     </tr>
                                                 </t>
                                                 <tr t-if="section.get('totals')" class="fw-semibold o_ajc_table_total">
                                                     <t t-foreach="section['totals']" t-as="cell">
-                                                        <td t-att-class="cell.get('class')" t-out="cell['value']"/>
+                                                        <td
+                                                            t-att-class="cell.get('class')"
+                                                            t-att-data-label="(section.get('mobile_headers') or section['headers'])[cell_index] if cell_index &lt; len(section.get('mobile_headers') or section['headers']) else ''"
+                                                        >
+                                                            <span class="o_ajc_cell_value" t-out="cell['value']"/>
+                                                        </td>
                                                     </t>
                                                 </tr>
                                             </tbody>
@@ -179,6 +189,61 @@
                     </div>
                 </t>
             </section>
+        </t>
+    </template>
+
+    <template id="portal_joinery_render_sections" name="Portal Joinery Render Sections">
+        <t t-if="not sections">
+            <div class="alert alert-light border mb-0">
+                <t t-out="empty_message or 'Aucune donnee agregee disponible pour cette configuration.'"/>
+            </div>
+        </t>
+        <t t-foreach="sections" t-as="section">
+            <div t-if="section['rows']" class="card border-0 shadow-sm rounded-4 o_ajc_result_line_card mb-3 mb-lg-4">
+                <div class="card-body p-4 p-lg-5">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                        <h5 class="h6 text-uppercase text-muted mb-0" t-out="section['title']"/>
+                        <span class="badge rounded-pill text-bg-light" t-out="'%s ligne(s)' % len(section['rows'])"/>
+                    </div>
+                    <div class="o_ajc_section_block mb-0">
+                        <t t-call="portal.portal_table">
+                            <t t-set="classes" t-value="'o_ajc_portal_table_wrap'"/>
+                            <t t-set="pager" t-value="False"/>
+                            <thead class="o_ajc_table_head">
+                                <tr>
+                                    <t t-foreach="section['headers']" t-as="header">
+                                        <th scope="col" t-out="header"/>
+                                    </t>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="section['rows']" t-as="row">
+                                    <tr>
+                                        <t t-foreach="row" t-as="cell">
+                                            <td
+                                                t-att-class="cell.get('class')"
+                                                t-att-data-label="(section.get('mobile_headers') or section['headers'])[cell_index] if cell_index &lt; len(section.get('mobile_headers') or section['headers']) else ''"
+                                            >
+                                                <span class="o_ajc_cell_value" t-out="cell['value']"/>
+                                            </td>
+                                        </t>
+                                    </tr>
+                                </t>
+                                <tr t-if="section.get('totals')" class="fw-semibold o_ajc_table_total">
+                                    <t t-foreach="section['totals']" t-as="cell">
+                                        <td
+                                            t-att-class="cell.get('class')"
+                                            t-att-data-label="(section.get('mobile_headers') or section['headers'])[cell_index] if cell_index &lt; len(section.get('mobile_headers') or section['headers']) else ''"
+                                        >
+                                            <span class="o_ajc_cell_value" t-out="cell['value']"/>
+                                        </td>
+                                    </t>
+                                </tr>
+                            </tbody>
+                        </t>
+                    </div>
+                </div>
+            </div>
         </t>
     </template>
 
@@ -530,6 +595,10 @@
                                     <i class="fa fa-download me-1"/>
                                     Telecharger la synthese matiere
                                 </a>
+                                <a t-if="detailed_results_xlsx_url" t-att-href="detailed_results_xlsx_url" class="btn btn-outline-dark">
+                                    <i class="fa fa-file-excel-o me-1"/>
+                                    Exporter Excel
+                                </a>
                                 <button type="button" class="btn btn-light" data-bs-toggle="offcanvas" data-bs-target="#ajcResultsHistoryPanel" aria-controls="ajcResultsHistoryPanel">
                                     <i class="fa fa-history me-1"/>
                                     Historique
@@ -550,49 +619,85 @@
                         </div>
                     </div>
 
-                    <div class="card border-0 shadow-sm rounded-4 o_ajc_results_section_card mb-4">
-                        <div class="card-body p-4 p-lg-5">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div>
-                                    <span class="text-uppercase small text-muted fw-semibold">Lecture detaillee</span>
-                                    <h3 class="h4 mb-0">Resultats calcules</h3>
-                                </div>
-                            </div>
-                            <t t-set="groups" t-value="result_groups"/>
-                            <t t-set="empty_message" t-value="'Aucun resultat detaille n est disponible pour cette configuration.'"/>
-                            <t t-call="aluminium_joinery_configurator.portal_joinery_render_groups"/>
-                        </div>
-                    </div>
-
-                    <div class="card border-0 shadow-sm rounded-4 o_ajc_results_section_card mb-4">
-                        <div class="card-body p-4 p-lg-5">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-                                <div>
-                                    <span class="text-uppercase small text-muted fw-semibold">Vision matiere</span>
-                                    <h3 class="h4 mb-0">Synthese matiere</h3>
-                                </div>
-                                <a t-if="material_summary_pdf_url" t-att-href="material_summary_pdf_url" class="btn btn-outline-dark btn-sm" target="_blank">
-                                    <i class="fa fa-download me-1"/>
-                                    Exporter la synthese matiere
-                                </a>
-                            </div>
-                            <t t-set="groups" t-value="summary_groups"/>
-                            <t t-set="empty_message" t-value="'La synthese matiere sera disponible apres calcul.'"/>
-                            <t t-call="aluminium_joinery_configurator.portal_joinery_render_groups"/>
-                        </div>
-                    </div>
-
                     <div class="card border-0 shadow-sm rounded-4 o_ajc_results_section_card">
                         <div class="card-body p-4 p-lg-5">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div>
-                                    <span class="text-uppercase small text-muted fw-semibold">Preparation atelier</span>
-                                    <h3 class="h4 mb-0">Apercu production</h3>
+                            <ul class="nav nav-tabs mb-4" id="ajcResultsTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="ajc-detailed-tab" data-bs-toggle="tab" data-bs-target="#ajc-detailed-pane" type="button" role="tab" aria-controls="ajc-detailed-pane" aria-selected="false">
+                                        Resultats detailles
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="ajc-grouped-tab" data-bs-toggle="tab" data-bs-target="#ajc-grouped-pane" type="button" role="tab" aria-controls="ajc-grouped-pane" aria-selected="true">
+                                        Resultats groupes
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="ajc-summary-tab" data-bs-toggle="tab" data-bs-target="#ajc-summary-pane" type="button" role="tab" aria-controls="ajc-summary-pane" aria-selected="false">
+                                        Synthese matiere
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="ajc-production-tab" data-bs-toggle="tab" data-bs-target="#ajc-production-pane" type="button" role="tab" aria-controls="ajc-production-pane" aria-selected="false">
+                                        Apercu production
+                                    </button>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="ajcResultsTabsContent">
+                                <div class="tab-pane fade" id="ajc-detailed-pane" role="tabpanel" aria-labelledby="ajc-detailed-tab" tabindex="0">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <span class="text-uppercase small text-muted fw-semibold">Lecture detaillee</span>
+                                            <h3 class="h4 mb-0">Resultats calcules</h3>
+                                        </div>
+                                    </div>
+                                    <t t-set="groups" t-value="result_groups"/>
+                                    <t t-set="empty_message" t-value="'Aucun resultat detaille n est disponible pour cette configuration.'"/>
+                                    <t t-call="aluminium_joinery_configurator.portal_joinery_render_groups"/>
+                                </div>
+                                <div class="tab-pane fade show active" id="ajc-grouped-pane" role="tabpanel" aria-labelledby="ajc-grouped-tab" tabindex="0">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <span class="text-uppercase small text-muted fw-semibold">Vue industrielle globale</span>
+                                            <h3 class="h4 mb-0">Resultats groupes</h3>
+                                            <p class="text-muted mb-0">Vue globale de ce qu il faut approvisionner, facturer ou planifier sur toute la configuration.</p>
+                                        </div>
+                                    </div>
+                                    <t t-set="sections" t-value="grouped_result_sections"/>
+                                    <t t-set="empty_message" t-value="'Aucun resultat groupe n est disponible pour cette configuration.'"/>
+                                    <t t-call="aluminium_joinery_configurator.portal_joinery_render_sections"/>
+                                </div>
+                                <div class="tab-pane fade" id="ajc-summary-pane" role="tabpanel" aria-labelledby="ajc-summary-tab" tabindex="0">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                                        <div>
+                                            <span class="text-uppercase small text-muted fw-semibold">Vision matiere</span>
+                                            <h3 class="h4 mb-0">Synthese matiere</h3>
+                                        </div>
+                                        <a t-if="material_summary_pdf_url" t-att-href="material_summary_pdf_url" class="btn btn-outline-dark btn-sm" target="_blank">
+                                            <i class="fa fa-download me-1"/>
+                                            Exporter la synthese matiere
+                                        </a>
+                                        <a t-if="detailed_results_xlsx_url" t-att-href="detailed_results_xlsx_url" class="btn btn-outline-dark btn-sm">
+                                            <i class="fa fa-file-excel-o me-1"/>
+                                            Exporter Excel
+                                        </a>
+                                    </div>
+                                    <t t-set="groups" t-value="summary_groups"/>
+                                    <t t-set="empty_message" t-value="'La synthese matiere sera disponible apres calcul.'"/>
+                                    <t t-call="aluminium_joinery_configurator.portal_joinery_render_groups"/>
+                                </div>
+                                <div class="tab-pane fade" id="ajc-production-pane" role="tabpanel" aria-labelledby="ajc-production-tab" tabindex="0">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <span class="text-uppercase small text-muted fw-semibold">Preparation atelier</span>
+                                            <h3 class="h4 mb-0">Apercu production</h3>
+                                        </div>
+                                    </div>
+                                    <t t-set="groups" t-value="production_groups"/>
+                                    <t t-set="empty_message" t-value="'Aucun apercu de production n est encore disponible.'"/>
+                                    <t t-call="aluminium_joinery_configurator.portal_joinery_render_groups"/>
                                 </div>
                             </div>
-                            <t t-set="groups" t-value="production_groups"/>
-                            <t t-set="empty_message" t-value="'Aucun apercu de production n est encore disponible.'"/>
-                            <t t-call="aluminium_joinery_configurator.portal_joinery_render_groups"/>
                         </div>
                     </div>
             </div>
@@ -749,8 +854,16 @@
                 <t t-set="title">Mes devis</t>
             </t>
 
-            <div t-if="not quotes" class="alert alert-warning" role="alert">
-                Aucun devis menuiserie n'a encore ete genere depuis votre portail.
+            <div t-if="not quotes" class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4 p-lg-5">
+                    <span class="text-uppercase small text-muted fw-semibold">Mes devis</span>
+                    <h2 class="h4 mt-2 mb-2">Aucun devis disponible pour le moment</h2>
+                    <p class="text-muted mb-4">Vos devis generes depuis le configurateur apparaitront ici. Vous pouvez demarrer une nouvelle configuration des maintenant.</p>
+                    <a href="/my/configurateur" class="btn btn-dark">
+                        <i class="fa fa-sliders me-1"/>
+                        Creer une configuration
+                    </a>
+                </div>
             </div>
 
             <t t-if="quotes" t-call="portal.portal_table">

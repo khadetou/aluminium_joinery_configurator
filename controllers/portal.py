@@ -54,6 +54,16 @@ class AluminiumJoineryCustomerPortal(CustomerPortal):
             raise MissingError(_("Cette configuration n'existe pas ou n'est pas accessible."))
         return configuration
 
+    def _get_exportable_configuration(self, configuration_id):
+        user = request.env.user
+        if user.has_group("base.group_user"):
+            configuration = request.env["aluminium.joinery.configuration"].browse(configuration_id).exists()
+            if not configuration:
+                raise MissingError(_("Cette configuration n'existe pas ou n'est pas accessible."))
+            configuration.check_access("read")
+            return configuration
+        return self._get_portal_configuration(configuration_id)
+
     def _prepare_home_portal_values(self, counters):
         values = super()._prepare_home_portal_values(counters)
         Configuration = request.env["aluminium.joinery.configuration"].sudo()
@@ -132,10 +142,14 @@ class AluminiumJoineryCustomerPortal(CustomerPortal):
                 "history_active_id": configuration.id if configuration else False,
                 "summary_groups": configuration._get_report_groups("summary") if configuration and configuration.summary_ids else [],
                 "result_groups": configuration._get_report_groups("result") if configuration and configuration.result_line_ids else [],
+                "grouped_result_sections": configuration._get_grouped_result_sections() if configuration and configuration.summary_ids else [],
                 "production_groups": configuration._get_report_groups("production") if configuration and configuration.result_line_ids else [],
                 "can_generate_quote": bool(configuration and configuration.summary_ids),
                 "quote_url": configuration.sale_order_id.get_joinery_portal_url() if configuration and configuration.sale_order_id else False,
                 "results_url": configuration.get_portal_results_url() if configuration else False,
+                "detailed_results_xlsx_url": (
+                    configuration.get_detailed_results_xlsx_url() if configuration and configuration.result_line_ids else False
+                ),
                 "material_summary_pdf_url": (
                     configuration.get_portal_material_summary_pdf_url() if configuration and configuration.summary_ids else False
                 ),
@@ -273,6 +287,24 @@ class AluminiumJoineryCustomerPortal(CustomerPortal):
             ("Content-Disposition", content_disposition(filename)),
         ]
         return request.make_response(pdf_content, headers=headers)
+
+    @http.route(
+        ["/aluminium_joinery/export/detailed-results/<int:configuration_id>.xlsx"],
+        type="http",
+        auth="user",
+        website=True,
+    )
+    def joinery_detailed_results_xlsx(self, configuration_id, **kwargs):
+        configuration = self._get_exportable_configuration(configuration_id)
+        if not configuration.result_line_ids:
+            raise MissingError(_("Aucun resultat detaille n'est disponible pour cette configuration."))
+        xlsx_content = configuration._build_detailed_result_xlsx()
+        headers = [
+            ("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            ("Content-Length", str(len(xlsx_content))),
+            ("Content-Disposition", content_disposition(configuration._get_detailed_result_export_filename())),
+        ]
+        return request.make_response(xlsx_content, headers=headers)
 
     @http.route("/my/configurateur/calculate", type="http", auth="user", website=True, methods=["POST"])
     def portal_joinery_calculate(self, **post):

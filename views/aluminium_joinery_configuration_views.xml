@@ -41,6 +41,7 @@
             <form string="Configuration menuiserie">
                 <header>
                     <button name="action_calculate" type="object" string="Calculer" class="btn-primary"/>
+                    <button name="action_export_detailed_results_xlsx" type="object" string="Exporter Excel" invisible="not result_line_ids"/>
                     <button name="action_generate_quotation" type="object" string="Generer le devis" invisible="state == 'draft'"/>
                     <button name="action_create_project" type="object" string="Creer le projet"/>
                     <button name="action_create_boms" type="object" string="Creer les nomenclatures" invisible="state == 'draft'"/>

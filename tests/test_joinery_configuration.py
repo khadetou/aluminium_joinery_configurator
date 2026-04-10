@@ -1,4 +1,6 @@
 import importlib.util
+import zipfile
+from io import BytesIO
 from pathlib import Path
 
 from odoo.tests.common import TransactionCase
@@ -368,6 +370,20 @@ class TestJoineryConfiguration(TransactionCase):
         self.assertNotIn("PU", profile_summary_section["headers"])
         self.assertNotIn("Total", profile_summary_section["headers"])
 
+        grouped_payload = configuration._get_grouped_result_payload()
+        self.assertTrue(grouped_payload["profiles"])
+        self.assertEqual(
+            sum(item["bars_required"] for item in grouped_payload["profiles"]),
+            sum(configuration.summary_ids.filtered(lambda rec: rec.category == "profile").mapped("bars_required")),
+        )
+        self.assertEqual(
+            sum(item["billed_length_mm"] for item in grouped_payload["profiles"]),
+            sum(configuration.summary_ids.filtered(lambda rec: rec.category == "profile").mapped("billed_length_mm")),
+        )
+        grouped_sections = configuration._get_grouped_result_sections()
+        grouped_profile_section = next(section for section in grouped_sections if section["title"] == "PROFILES")
+        self.assertIn("Longueur facturable (mm)", grouped_profile_section["headers"])
+
     def test_generate_quotation_uses_business_uoms_and_converted_quantities(self):
         self._import_native_industrial_dataset()
 
@@ -646,3 +662,87 @@ class TestJoineryConfiguration(TransactionCase):
             }
         )
         self.assertEqual(order.get_joinery_portal_url(), f"/my/joinery/quotes/{order.id}")
+
+    def test_detailed_result_xlsx_export_builds_valid_workbook(self):
+        self._import_native_industrial_dataset()
+
+        gamme = self.env["aluminium.joinery.gamme"].search([("code", "=", "masai")], limit=1)
+        serie = self.env["aluminium.joinery.serie"].search(
+            [("code", "=", "masai_a_frappe"), ("gamme_id", "=", gamme.id)],
+            limit=1,
+        )
+        modele = self.env["aluminium.joinery.modele"].search(
+            [("code", "=", "fenetre_fixe"), ("serie_id", "=", serie.id)],
+            limit=1,
+        )
+        configuration = self.env["aluminium.joinery.configuration"].create(
+            {"partner_id": self.env.ref("base.res_partner_1").id, "project_name": "Export XLSX"}
+        )
+        self.env["aluminium.joinery.configuration.line"].create(
+            {
+                "configuration_id": configuration.id,
+                "gamme_id": gamme.id,
+                "serie_id": serie.id,
+                "modele_id": modele.id,
+                "qty": 1,
+                "width_mm": 1200,
+                "height_mm": 1200,
+            }
+        )
+        configuration.action_calculate()
+
+        content = configuration._build_detailed_result_xlsx()
+
+        self.assertTrue(content.startswith(b"PK"))
+        archive = zipfile.ZipFile(BytesIO(content))
+        self.assertEqual(
+            set(archive.namelist()),
+            {
+                "[Content_Types].xml",
+                "_rels/.rels",
+                "docProps/app.xml",
+                "docProps/core.xml",
+                "xl/workbook.xml",
+                "xl/_rels/workbook.xml.rels",
+                "xl/styles.xml",
+                "xl/worksheets/sheet1.xml",
+            },
+        )
+        sheet_xml = archive.read("xl/worksheets/sheet1.xml").decode()
+        self.assertIn("Resultats detailles", sheet_xml)
+        self.assertIn("GAMME : Masai", sheet_xml)
+        self.assertIn("PROFILES", sheet_xml)
+        self.assertIn("REMPLISSAGES", sheet_xml)
+
+    def test_detailed_result_xlsx_export_action_uses_shared_download_route(self):
+        self._import_native_industrial_dataset()
+
+        gamme = self.env["aluminium.joinery.gamme"].search([("code", "=", "masai")], limit=1)
+        serie = self.env["aluminium.joinery.serie"].search(
+            [("code", "=", "masai_a_frappe"), ("gamme_id", "=", gamme.id)],
+            limit=1,
+        )
+        modele = self.env["aluminium.joinery.modele"].search(
+            [("code", "=", "fenetre_fixe"), ("serie_id", "=", serie.id)],
+            limit=1,
+        )
+        configuration = self.env["aluminium.joinery.configuration"].create(
+            {"partner_id": self.env.ref("base.res_partner_1").id}
+        )
+        self.env["aluminium.joinery.configuration.line"].create(
+            {
+                "configuration_id": configuration.id,
+                "gamme_id": gamme.id,
+                "serie_id": serie.id,
+                "modele_id": modele.id,
+                "qty": 1,
+                "width_mm": 1200,
+                "height_mm": 1200,
+            }
+        )
+        configuration.action_calculate()
+
+        action = configuration.action_export_detailed_results_xlsx()
+
+        self.assertEqual(action["type"], "ir.actions.act_url")
+        self.assertEqual(action["url"], configuration.get_detailed_results_xlsx_url())
